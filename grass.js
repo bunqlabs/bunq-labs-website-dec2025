@@ -318,8 +318,8 @@ export class GrassScene {
       { count: MAX_GRASS_COUNT, dprMax: 1.5, name: 'High' },          // Desktop High
       { count: 35000, dprMax: 1.25, name: 'Medium-High' }, // Desktop Med
       { count: 25000, dprMax: 1.0, name: 'Medium' },       // Desktop Low
-      { count: 18000, dprMax: 1.0, name: 'Mobile High' },  // Mobile High / Tablet
-      { count: 12000, dprMax: 1.0, name: 'Mobile Low' },   // Mobile Low
+      { count: 15000, dprMax: 1.0, name: 'Mobile High' },  // Mobile High / Tablet
+      { count: 10000, dprMax: 1.0, name: 'Mobile Low' },   // Mobile Low
     ];
 
     // Detect tier based on device capability AND screen size
