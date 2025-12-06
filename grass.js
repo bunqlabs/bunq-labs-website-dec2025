@@ -526,6 +526,8 @@ export class GrassScene {
 
   mount() {
     window.addEventListener('pointermove', this.onPointerMove, { capture: true });
+    window.addEventListener('touchstart', this.onTouchMove, { capture: true });
+    window.addEventListener('touchmove', this.onTouchMove, { capture: true });
     window.addEventListener('pointerout', this.onPointerOut);
     window.addEventListener('scroll', this.onScroll);
   }
@@ -533,6 +535,8 @@ export class GrassScene {
   unmount() {
     window.removeEventListener('pointermove', this.onPointerMove, { capture: true });
     window.removeEventListener('pointerout', this.onPointerOut);
+    window.removeEventListener('touchstart', this.onTouchMove, { capture: true });
+    window.removeEventListener('touchmove', this.onTouchMove, { capture: true });
     window.removeEventListener('scroll', this.onScroll);
   }
 
@@ -550,8 +554,22 @@ export class GrassScene {
 
   onPointerMove = (e) => {
     const t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
-    this.mouse.x = (t.clientX / window.innerWidth) * 2 - 1;
-    this.mouse.y = -(t.clientY / window.innerHeight) * 2 + 1;
+    this.updateMousePosition(t.clientX, t.clientY);
+  }
+
+  onTouchMove = (e) => {
+     // Prevent default to stop scrolling IF we want full control, 
+     // but usually we want to allow scrolling. 
+     // For wind effect, we just want to read the position.
+     const t = e.touches[0];
+     if (t) {
+         this.updateMousePosition(t.clientX, t.clientY);
+     }
+  }
+
+  updateMousePosition(clientX, clientY) {
+    this.mouse.x = (clientX / window.innerWidth) * 2 - 1;
+    this.mouse.y = -(clientY / window.innerHeight) * 2 + 1;
     this.isHovering = true;
   }
 

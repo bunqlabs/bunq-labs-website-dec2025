@@ -102,7 +102,18 @@ if (barba) {
 }
 
 // --- Resize ---
+// --- Resize ---
+let lastWindowWidth = window.innerWidth;
+
 window.addEventListener('resize', () => {
+    // Mobile optimization: Only resize if width changes. 
+    // This prevents canvas thrashing when the URL bar shows/hides on mobile scroll.
+    if (window.innerWidth === lastWindowWidth) {
+        return;
+    }
+    
+    lastWindowWidth = window.innerWidth;
+    
     const w = window.innerWidth;
     const h = window.innerHeight;
     renderer.setSize(w, h);
