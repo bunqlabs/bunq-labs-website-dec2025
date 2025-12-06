@@ -318,8 +318,8 @@ export class GrassScene {
       { count: MAX_GRASS_COUNT, dprMax: 1.5, name: 'High' },          // Desktop High
       { count: 35000, dprMax: 1.25, name: 'Medium-High' }, // Desktop Med
       { count: 25000, dprMax: 1.0, name: 'Medium' },       // Desktop Low
-      { count: 15000, dprMax: 1.0, name: 'Mobile High' },  // Mobile High / Tablet
-      { count: 10000, dprMax: 1.0, name: 'Mobile Low' },   // Mobile Low
+      { count: 15000, dprMax: 0.75, name: 'Mobile High' },  // Mobile High / Tablet
+      { count: 10000, dprMax: 0.75, name: 'Mobile Low' },   // Mobile Low
     ];
 
     // Detect tier based on device capability AND screen size
@@ -458,9 +458,11 @@ export class GrassScene {
   }
 
   updateScrollState(currentY) {
-    const vh = window.innerHeight;
-    const progress = vh > 0 ? currentY / vh : 0;
-    this.scrollOffsetNormZ = progress * conveyorConfig.loops;
+    // Optimized for Mobile: Use absolute pixel scroll instead of relative viewport-height.
+    // 0.0005 means 2000px of scroll = 1 full texture/conveyor cycle.
+    // This decouples the speed from the dynamic window.innerHeight on mobile.
+    const SCROLL_NORM_PER_PIXEL = 0.0005;
+    this.scrollOffsetNormZ = currentY * SCROLL_NORM_PER_PIXEL;
 
     const extentZ = planeSize * this.ground.scale.z;
     this.uniforms.scrollOffsetZ.value = this.scrollOffsetNormZ * extentZ;
