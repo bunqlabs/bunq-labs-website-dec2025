@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bunq Labs • Mountain & Grass</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        font-family: "Inter", "Segoe UI", system-ui, -apple-system,
+          BlinkMacSystemFont, sans-serif;
+        background: #050505;
+        color: #f8fafc;
+      }
+      body {
+        min-height: 100vh;
+        overflow-x: hidden;
+      }
+
+      section {
+        width: 100vw;
+      }
+
+      #hero {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      #mountain {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+      }
+
+      #hero-overlay {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background: radial-gradient(
+          ellipse at center,
+          rgba(15, 15, 20, 0.05) 0%,
+          rgba(5, 5, 10, 0.8) 70%
+        );
+      }
+
+      .hero-copy {
+        position: relative;
+        z-index: 10;
+        padding: 6vw;
+        max-width: 520px;
+      }
+
+      .hero-title {
+        font-size: 1.5rem;
+        margin: 0 0 1rem;
+        letter-spacing: -0.03em;
+      }
+
+      .hero-subtitle {
+        margin: 0;
+        line-height: 1.5;
+        color: #cbd5f5;
+      }
+
+      #showreel {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 100vw;
+        height: 100vh;
+        background: #020202;
+      }
+
+      #showreel .showreel-copy {
+        text-align: center;
+        max-width: 640px;
+        padding: 2rem;
+        color: #94a3b8;
+        font-size: clamp(1rem, 2vw, 1.25rem);
+        line-height: 1.6;
+      }
+
+      #grass-wrapper {
+        position: relative;
+        width: 100vw;
+        height: 500vh;
+        background: linear-gradient(
+          180deg,
+          #020617 0%,
+          #0f172a 35%,
+          #020617 100%
+        );
+      }
+
+      #grass {
+        position: sticky;
+        top: 0;
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+        z-index: 0;
+      }
+
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <section id="hero">
+      <div id="mountain" aria-hidden="true"></div>
+      <div id="hero-overlay"></div>
+    </section>
+
+    <section id="showreel">
+      <div class="showreel-copy">
+        <h2>Showreel</h2>
+        <p>
+          A curated sequence lives here. Keep this block free of Three.js to
+          prioritise encoded playback performance.
+        </p>
+      </div>
+    </section>
+
+    <section id="grass-wrapper">
+      <div id="grass" aria-hidden="true"></div>
+    </section>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "lil-gui": "https://unpkg.com/lil-gui@0.19.1/dist/lil-gui.esm.min.js",
+          "lenis": "https://unpkg.com/@studio-freight/lenis@1.0.33/dist/lenis.min.mjs"
+        }
+      }
+    </script>
+    <script type="module" src="./scripts/main.js"></script>
+  </body>
+</html>
