@@ -315,13 +315,26 @@ export class GrassScene {
     
     // --- Performance State ---
     this.QUALITY_TIERS = [
-      { count: MAX_GRASS_COUNT, dprMax: 1.5, name: 'High' },
-      { count: 40000, dprMax: 1.25, name: 'Medium-High' },
-      { count: INITIAL_GRASS_COUNT, dprMax: 1.0, name: 'Medium' },
-      { count: 20000, dprMax: 1.0, name: 'Low' },
-      { count: 10000, dprMax: 0.8, name: 'Very Low' }
+      { count: MAX_GRASS_COUNT, dprMax: 1.5, name: 'High' },          // Desktop High
+      { count: 35000, dprMax: 1.25, name: 'Medium-High' }, // Desktop Med
+      { count: 25000, dprMax: 1.0, name: 'Medium' },       // Desktop Low
+      { count: 18000, dprMax: 1.0, name: 'Mobile High' },  // Mobile High / Tablet
+      { count: 12000, dprMax: 1.0, name: 'Mobile Low' },   // Mobile Low
     ];
-    this.currentTierIndex = (navigator.hardwareConcurrency && navigator.hardwareConcurrency <= 4) ? 3 : 2;
+
+    // Detect tier based on device capability AND screen size
+    const isMobile = window.innerWidth < 768;
+    const coreCount = navigator.hardwareConcurrency || 4;
+    
+    // Default logic
+    if (isMobile) {
+        // On mobile, default to Tier 4 (12k) if low cores, else Tier 3 (18k)
+        this.currentTierIndex = (coreCount <= 4) ? 4 : 3;
+    } else {
+        // On desktop, default to Tier 2 (25k) if low cores, else Tier 1 (35k)
+        // Reserve Tier 0 for manual high quality override
+        this.currentTierIndex = (coreCount <= 4) ? 2 : 1;
+    }
 
     this.init();
   }
@@ -332,6 +345,7 @@ export class GrassScene {
     
     this.updateGroundToViewport();
     this.applyGrassPositions();
+    // Apply tier immediately to set DPR and Count
     this.applyQualityTier(this.currentTierIndex);
   }
 
