@@ -1,12 +1,5 @@
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import stats from 'three/addons/libs/stats.module.js';
-import gsap from 'https://unpkg.com/gsap@3.12.5/index.js?module';
 
 export class MountainScene {
   constructor(renderer) {
@@ -21,19 +14,8 @@ export class MountainScene {
       2000
     );
     this.camera.position.set(0, 0, 0.65);
-    // Base position for parallax
-    this.baseCam = this.camera.position.clone();
-
-    // --- Controls ---
-    this.controls = new OrbitControls(this.camera, renderer.domElement);
-    this.controls.enableDamping = true;
-    this.controls.target.set(0, 0, 0);
-    this.controls.enabled = false;
 
     // --- State ---
-    this.mouseOffsetX = 0;
-    this.mouseOffsetY = 0;
-    this.scrollOffsetY = 0;
     this.snowCount = 1000;
     this.snowArea = { x: 0.5, y: 0.5, z: 0.5 };
     
@@ -43,7 +25,7 @@ export class MountainScene {
   init() {
     this.initBackground();
     this.initScreen();
-    this.initPostProcessing();
+    // Post-processing removed for performance
     this.initLoader();
     this.initSnow();
   }
@@ -84,7 +66,7 @@ export class MountainScene {
     this.video.loop = true;
     this.video.playsInline = true;
     this.video.preload = 'auto';
-    this.video.autoplay = true; // Auto-play attempt
+    this.video.autoplay = true; 
     
     this.videoTexture = new THREE.VideoTexture(this.video);
     this.videoTexture.colorSpace = THREE.SRGBColorSpace;
@@ -114,29 +96,6 @@ export class MountainScene {
     this.sampleCanvas.height = this.sampleH;
     this.sampleCtx = this.sampleCanvas.getContext('2d', { willReadFrequently: true });
     this.sampleCtx.imageSmoothingEnabled = true;
-  }
-
-  initPostProcessing() {
-    this.composer = new EffectComposer(this.renderer);
-    
-    const renderPass = new RenderPass(this.scene, this.camera);
-    this.composer.addPass(renderPass);
-    
-    this.bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(window.innerWidth, window.innerHeight),
-      0.3, // strength
-      3, // radius
-      0.01 // threshold
-    );
-    this.composer.addPass(this.bloomPass);
-    
-    // Note: If using newer Three.js, we might strictly need OutputPass for tone mapping
-    // But since mountain.js manually set toneMapping on renderer, 
-    // and Config passes usually handle it, let's stick to simple bloom for now 
-    // to match original logic, or add OutputPass if needed. 
-    // Original script didn't use OutputPass but set renderer.toneMapping. 
-    // EffectComposer overrides renderer output, so we should be careful.
-    // For now, mirroring original setup: Render + Bloom.
   }
 
   initLoader() {
@@ -206,9 +165,6 @@ export class MountainScene {
   resize(width, height) {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
-    this.composer.setSize(width, height);
-    this.bloomPass.setSize(width, height);
-    // updateScrollOffset logic is internal
   }
 
   updateLightFromVideo() {
@@ -236,23 +192,6 @@ export class MountainScene {
     this.screenLight.color.copy(c);
   }
 
-  updateCamera() {
-    // GSAP animation would be here if trigged strictly by events,
-    // but we can just interpolate manually or use GSAP if we kept the import.
-    // Original used GSAP. We imported GSAP, so we can use it.
-    const targetX = this.baseCam.x + this.mouseOffsetX;
-    const targetY = this.baseCam.y + this.mouseOffsetY + this.scrollOffsetY;
-    
-    gsap.to(this.camera.position, {
-        x: targetX,
-        y: targetY,
-        duration: 0.1, // smoothed
-        overwrite: true,
-        ease: 'power2.out',
-    });
-    this.camera.lookAt(0, 0, 0);
-  }
-
   updateSnow(time, dt) {
     if (!this.snowGeo) return;
     const pos = this.snowGeo.getAttribute('position');
@@ -275,47 +214,28 @@ export class MountainScene {
   }
 
   update(time, dt) {
-    this.controls.update();
     this.updateLightFromVideo();
     this.updateSnow(time, dt);
-    this.updateCamera(); // Sync camera with GSAP/Offsets
   }
 
   render() {
-    this.composer.render();
+    // Direct render, no composer
+    this.renderer.render(this.scene, this.camera);
   }
 
   // --- Events ---
 
   mount() {
-    window.addEventListener('mousemove', this.onMouseMove);
-    window.addEventListener('scroll', this.onScroll, { passive: true });
     window.addEventListener('click', this.resumeVideo, { once: true });
     window.addEventListener('touchstart', this.resumeVideo, { once: true });
     if (this.video && this.video.paused) this.video.play().catch(() => {});
-    
-    // Initial sync
-    this.onScroll();
   }
 
   unmount() {
-    window.removeEventListener('mousemove', this.onMouseMove);
-    window.removeEventListener('scroll', this.onScroll);
+    // No specific listeners to remove except the video ones if they haven't fired
+    window.removeEventListener('click', this.resumeVideo);
+    window.removeEventListener('touchstart', this.resumeVideo);
     if (this.video) this.video.pause();
-  }
-
-  onMouseMove = (e) => {
-    const nx = (e.clientX / window.innerWidth) * 2 - 1;
-    const ny = (e.clientY / window.innerHeight) * 2 - 1;
-    this.mouseOffsetX = nx * 0.03;
-    this.mouseOffsetY = -ny * 0.03;
-  }
-
-  onScroll = () => {
-    // Assuming 100vh hero height for parallax calc
-    const heroH = window.innerHeight; 
-    const progress = Math.max(0, Math.min(1, window.scrollY / heroH));
-    this.scrollOffsetY = -0.2 * progress;
   }
 
   resumeVideo = () => {
@@ -324,8 +244,6 @@ export class MountainScene {
 
   dispose() {
       // Inputs
-      window.removeEventListener('mousemove', this.onMouseMove);
-      window.removeEventListener('scroll', this.onScroll);
       window.removeEventListener('click', this.resumeVideo);
       window.removeEventListener('touchstart', this.resumeVideo);
       
@@ -340,14 +258,6 @@ export class MountainScene {
       if (this.screenMesh) {
           this.screenMesh.geometry.dispose();
           this.screenMesh.material.dispose();
-      }
-      
-      // Post-processing
-      if (this.composer) {
-          // Dispose passes if they have methods (EffectComposer passes usually don't have standard dispose, 
-          // but we can clear the render targets)
-          this.composer.renderTarget1.dispose();
-          this.composer.renderTarget2.dispose();
       }
       
       // Scene

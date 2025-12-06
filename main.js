@@ -15,8 +15,13 @@ const renderer = new THREE.WebGLRenderer({
   powerPreference: 'high-performance',
   alpha: false, 
 });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
-renderer.setSize(window.innerWidth, window.innerHeight);
+
+// Mobile Optimization: Global DPR Cap
+const isMobile = window.innerWidth < 768;
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.0 : 1.5));
+
+// Mobile Optimization: Size to container (fixed CSS height) to prevent stretching
+renderer.setSize(container.clientWidth, container.clientHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 // Enable scissor test logic
 renderer.setScissorTest(false); 
@@ -35,6 +40,11 @@ document.body.appendChild(stats.dom);
 // --- Scenes ---
 const mountainScene = new MountainScene(renderer);
 const grassScene = new GrassScene(renderer);
+
+// Initial sizing to match container (100lvh)
+// This ensures camera aspect ratios match the renderer viewport immediately
+mountainScene.resize(container.clientWidth, container.clientHeight);
+grassScene.resize(container.clientWidth, container.clientHeight);
 
 // State
 let isHome = false; // "home" namespace has mountain
@@ -102,7 +112,6 @@ if (barba) {
 }
 
 // --- Resize ---
-// --- Resize ---
 let lastWindowWidth = window.innerWidth;
 
 window.addEventListener('resize', () => {
@@ -114,8 +123,9 @@ window.addEventListener('resize', () => {
     
     lastWindowWidth = window.innerWidth;
     
-    const w = window.innerWidth;
-    const h = window.innerHeight;
+    // Resize based on container dimensions to match CSS (100lvh)
+    const w = container.clientWidth;
+    const h = container.clientHeight;
     renderer.setSize(w, h);
     mountainScene.resize(w, h);
     grassScene.resize(w, h);
@@ -134,7 +144,11 @@ function animate() {
     // 1. Render Grass (Background, Full Screen)
     // Ensure scissor is OFF for background
     renderer.setScissorTest(false);
-    renderer.setViewport(0, 0, window.innerWidth, window.innerHeight);
+    // Use stored canvas size or container size, keeping viewport clean
+    const width = renderer.domElement.width / renderer.getPixelRatio();
+    const height = renderer.domElement.height / renderer.getPixelRatio();
+    renderer.setViewport(0, 0, width, height);
+    
     grassScene.update(time, dt);
     grassScene.render();
 
@@ -146,13 +160,13 @@ function animate() {
         if (rect.bottom > 0 && rect.top < window.innerHeight && rect.width > 0 && rect.height > 0) {
             
             // Calculate scissor box (bottom-left origin for GL)
-            const width = rect.width;
-            const height = rect.height;
+            const w = rect.width;
+            const h = rect.height;
             const left = rect.left;
             const bottom = window.innerHeight - rect.bottom;
 
-            renderer.setScissor(left, bottom, width, height);
-            renderer.setViewport(left, bottom, width, height);
+            renderer.setScissor(left, bottom, w, h);
+            renderer.setViewport(left, bottom, w, h);
             renderer.setScissorTest(true);
             
             // Clear depth so mountain draws over grass cleanly in that region
@@ -161,8 +175,6 @@ function animate() {
             mountainScene.update(time, dt);
             mountainScene.render();
         }
-    } else {
-        // If not home, ensure we don't leak scissor state (though line 110 handles it, safety first)
     }
 
     stats.end();
