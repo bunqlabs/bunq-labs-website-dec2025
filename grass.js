@@ -357,6 +357,9 @@ export class GrassScene {
     this.ground = new THREE.Mesh(groundGeometry, groundMaterial);
     this.scene.add(this.ground);
 
+    // Initial Aspect for Mobile Locking
+    this.initialAspect = window.innerWidth / window.innerHeight;
+
     // Uniforms
     this.uniforms = {
       time: { value: 0.0 },
@@ -444,7 +447,13 @@ export class GrassScene {
   }
 
   updateGroundToViewport() {
-    const aspect = this.camera.aspect;
+    // On mobile (<768px), we LOCK the ground scale to the initial aspect ratio.
+    // This prevents the ground from 'shrinking' horizontally when the URL bar hides
+    // (which increases height -> decreases aspect ratio).
+    // Usage: We treat the initial state as the "max width" state.
+    const isMobile = window.innerWidth < 768;
+    const aspect = isMobile ? this.initialAspect : this.camera.aspect;
+    
     this.ground.scale.set(aspect, 1, 1);
   }
 
