@@ -459,7 +459,7 @@ export class GrassScene {
     const aspect = width / height;
     
     // 1. Grass Count Logic: aspectRatio * 20000
-    const rawCount = Math.floor(aspect * 20000);
+    const rawCount = Math.floor(aspect * 15000);
     const targetCount = Math.min(MAX_GRASS_COUNT, rawCount);
     
     if (this.grass) {
