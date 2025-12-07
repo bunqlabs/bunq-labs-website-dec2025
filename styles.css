@@ -29,6 +29,7 @@ body {
 
 .hero-section {
   position: relative;
+  height: 100lvh !important;
   /* background is transparent to show mountain canvas behind */
 }
 
