@@ -145,8 +145,9 @@ export class MountainScene {
         this.screenMesh.add(this.screenLight);
 
         this.sampleCanvas = document.createElement('canvas');
-        this.sampleW = 16;
-        this.sampleH = 9;
+        // OPTIMIZATION: Reduce sample size to minimum (4x4) to speed up drawImage/getImageData
+        this.sampleW = 4;
+        this.sampleH = 4;
         this.sampleCanvas.width = this.sampleW;
         this.sampleCanvas.height = this.sampleH;
         this.sampleCtx = this.sampleCanvas.getContext('2d', { willReadFrequently: true });
@@ -252,8 +253,11 @@ export class MountainScene {
         this.updatePerformanceConfig(width, height);
     }
 
-    updateLightFromVideo() {
+    updateLightFromVideo(dt) {
         if (!this.video || this.video.readyState < 2) return;
+
+        // OPTIMIZATION: Skip expensive light update if frame rate is already dropping (below ~45fps)
+        if (dt > 0.022) return;
 
         this.lightUpdateFrame++;
         if (this.lightUpdateFrame % 10 !== 0) return;
@@ -303,7 +307,7 @@ export class MountainScene {
 
     update(time, dt) {
         this.perfMonitor.update(dt);
-        this.updateLightFromVideo();
+        this.updateLightFromVideo(dt);
         this.updateSnow(time, dt);
     }
 

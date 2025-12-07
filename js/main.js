@@ -127,19 +127,25 @@ window.addEventListener('scroll', () => {
     updateVirtualScroll();
 }, { passive: true });
 
+let resizeTimeout;
 window.addEventListener('resize', () => {
     if (Math.abs(window.innerWidth - lastWindowWidth) < 2) return;
     lastWindowWidth = window.innerWidth;
 
-    const w = container.clientWidth;
-    const h = container.clientHeight;
+    // Clear debounce
+    if (resizeTimeout) clearTimeout(resizeTimeout);
 
-    renderer.setSize(w, h);
-    mountainScene.resize(w, h);
-    grassScene.resize(w, h);
+    resizeTimeout = setTimeout(() => {
+        const w = container.clientWidth;
+        const h = container.clientHeight;
 
-    // update cache
-    calcMountainConfig();
+        renderer.setSize(w, h);
+        mountainScene.resize(w, h);
+        grassScene.resize(w, h);
+
+        // update cache
+        calcMountainConfig();
+    }, 100); // 100ms debounce
 }, { passive: true });
 
 // === BARBA SETUP ===
