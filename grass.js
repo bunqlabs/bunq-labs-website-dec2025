@@ -1,51 +1,6 @@
 import * as THREE from 'three';
-import Stats from 'three/addons/libs/stats.module.js';
 
-// ==========================================
-// CONFIGURATION
-// ==========================================
-
-const planeSize = 30;
-const MAX_GRASS_COUNT = 50000;
-const INITIAL_GRASS_COUNT = 30000;
-const grassCount = MAX_GRASS_COUNT; 
-
-const bladeWidth = 0.4;
-const bladeHeight = 1.2;
-const bladeSegments = 1;
-const taperFactor = 0.0;
-
-const initialUniforms = {
-  turbulenceAmplitude: 0.4,
-  turbulenceFrequency: 0.2,
-  damping: 0.3,
-  windStrength: 1.2,
-  trailDecay: 0.98,
-  diffusion: 0.25,
-  advection: 1.0,
-  injectionRadius: 0.02,
-  injectionStrength: 1.0,
-  injectionStrengthMax: 1.0,
-  fieldResolution: 32,
-  glowThreshold: 0.05,
-  glowBoost: 0.2,
-};
-
-const conveyorConfig = {
-  loops: 0.4,
-};
-
-const cameraConfig = {
-  fov: 75,
-  near: 0.1,
-  far: 1000,
-  position: [0, 20, 0],
-  lookAt: [0, 0, 0],
-};
-
-// ==========================================
-// SHADERS
-// ==========================================
+// === SHADERS ===
 
 const grassVertexShader = `
   uniform float time;
@@ -129,9 +84,41 @@ const grassFragmentShader = `
   }
 `;
 
-// ==========================================
-// WIND FIELD
-// ==========================================
+// === CONFIGURATION ===
+
+const planeSize = 30;
+const MAX_GRASS_COUNT = 50000;
+const grassCount = MAX_GRASS_COUNT; 
+const bladeWidth = 0.4;
+const bladeHeight = 1.2;
+const bladeSegments = 1;
+const taperFactor = 0.0;
+
+const initialUniforms = {
+  turbulenceAmplitude: 0.4,
+  turbulenceFrequency: 0.2,
+  damping: 0.3,
+  windStrength: 1.2,
+  trailDecay: 0.98,
+  diffusion: 0.25,
+  advection: 1.0,
+  injectionRadius: 0.02,
+  injectionStrength: 1.0,
+  injectionStrengthMax: 1.0,
+  fieldResolution: 32,
+  glowThreshold: 0.05,
+  glowBoost: 0.2,
+};
+
+const cameraConfig = {
+  fov: 75,
+  near: 0.1,
+  far: 1000,
+  position: [0, 20, 0],
+  lookAt: [0, 0, 0],
+};
+
+// === HELPERS ===
 
 class WindField {
   constructor(renderer, size = 256, params = {}) {
@@ -285,27 +272,16 @@ class WindField {
   }
 }
 
-// ==========================================
-// GRASS SCENE
-// ==========================================
+// === SCENE CLASS ===
 
 export class GrassScene {
+  
+  // === LIFECYCLE ===
+
   constructor(renderer) {
     this.renderer = renderer;
     this.scene = new THREE.Scene();
     
-    // --- Camera Setup ---
-    this.camera = new THREE.PerspectiveCamera(
-      cameraConfig.fov,
-      window.innerWidth / window.innerHeight,
-      cameraConfig.near,
-      cameraConfig.far
-    );
-    this.camera.position.set(...cameraConfig.position);
-    this.camera.lookAt(...cameraConfig.lookAt);
-    this.camera.up.set(0, 0, -1); 
-
-    // --- State ---
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
     this.isHovering = false;
@@ -313,29 +289,17 @@ export class GrassScene {
     this.scrollOffsetNormZ = 0;
     this.grassBasePositions = [];
     
-    // --- Performance State ---
     this.QUALITY_TIERS = [
-      { count: MAX_GRASS_COUNT, dprMax: 1.5, name: 'High' },          // Desktop High
-      { count: 35000, dprMax: 1.25, name: 'Medium-High' }, // Desktop Med
-      { count: 25000, dprMax: 1.0, name: 'Medium' },       // Desktop Low
-      { count: 15000, dprMax: 0.75, name: 'Mobile High' },  // Mobile High / Tablet
-      { count: 10000, dprMax: 0.75, name: 'Mobile Low' },   // Mobile Low
+      { count: MAX_GRASS_COUNT, dprMax: 1.5, name: 'High' },
+      { count: 35000, dprMax: 1.0, name: 'Medium-High' },
+      { count: 25000, dprMax: 0.75, name: 'Medium' },
+      { count: 15000, dprMax: 0.5, name: 'Mobile High' },
+      { count: 10000, dprMax: 0.5, name: 'Mobile Low' },
     ];
 
-    // Detect tier based on device capability AND screen size
-    const isMobile = window.innerWidth < 768;
-    const coreCount = navigator.hardwareConcurrency || 4;
-    
-    // Default logic
-    if (isMobile) {
-        // On mobile, default to Tier 4 (12k) if low cores, else Tier 3 (18k)
-        this.currentTierIndex = (coreCount <= 4) ? 4 : 3;
-    } else {
-        // On desktop, default to Tier 2 (25k) if low cores, else Tier 1 (35k)
-        // Reserve Tier 0 for manual high quality override
-        this.currentTierIndex = (coreCount <= 4) ? 2 : 1;
-    }
+    this.currentTierIndex = this.evaluateTier(window.innerWidth);
 
+    this.initCamera();
     this.init();
   }
 
@@ -345,22 +309,59 @@ export class GrassScene {
     
     this.updateGroundToViewport();
     this.applyGrassPositions();
-    // Apply tier immediately to set DPR and Count
     this.applyQualityTier(this.currentTierIndex);
   }
 
+  dispose() {
+    this.ground.geometry.dispose();
+    this.ground.material.dispose();
+    this.grass.geometry.dispose();
+    this.grass.material.dispose();
+    this.windField.rtA.dispose();
+    this.windField.rtB.dispose();
+    this.windField.mesh.geometry.dispose();
+    this.windField.material.dispose();
+  }
+
+  mount() {
+    window.addEventListener('pointermove', this.onPointerMove, { capture: true });
+    window.addEventListener('touchstart', this.onTouchMove, { capture: true });
+    window.addEventListener('touchmove', this.onTouchMove, { capture: true });
+    window.addEventListener('pointerout', this.onPointerOut);
+    window.addEventListener('scroll', this.onScroll);
+  }
+
+  unmount() {
+    window.removeEventListener('pointermove', this.onPointerMove, { capture: true });
+    window.removeEventListener('pointerout', this.onPointerOut);
+    window.removeEventListener('touchstart', this.onTouchMove, { capture: true });
+    window.removeEventListener('touchmove', this.onTouchMove, { capture: true });
+    window.removeEventListener('scroll', this.onScroll);
+  }
+
+  // === INITIALIZATION ===
+
+  initCamera() {
+    this.camera = new THREE.PerspectiveCamera(
+      cameraConfig.fov,
+      window.innerWidth / window.innerHeight,
+      cameraConfig.near,
+      cameraConfig.far
+    );
+    this.camera.position.set(...cameraConfig.position);
+    this.camera.lookAt(...cameraConfig.lookAt);
+    this.camera.up.set(0, 0, -1); 
+  }
+
   initSystems() {
-    // Ground
     const groundGeometry = new THREE.PlaneGeometry(planeSize, planeSize);
     groundGeometry.rotateX(-Math.PI / 2);
     const groundMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
     this.ground = new THREE.Mesh(groundGeometry, groundMaterial);
     this.scene.add(this.ground);
 
-    // Initial Aspect for Mobile Locking
     this.initialAspect = window.innerWidth / window.innerHeight;
 
-    // Uniforms
     this.uniforms = {
       time: { value: 0.0 },
       turbulenceAmplitude: { value: initialUniforms.turbulenceAmplitude },
@@ -375,7 +376,6 @@ export class GrassScene {
       glowBoost: { value: initialUniforms.glowBoost },
     };
 
-    // Wind Field
     this.windField = new WindField(this.renderer, initialUniforms.fieldResolution, {
       decay: initialUniforms.trailDecay,
       diffusion: initialUniforms.diffusion,
@@ -390,7 +390,6 @@ export class GrassScene {
   initGrass() {
     const grassGeometry = new THREE.PlaneGeometry(bladeWidth, bladeHeight, 1, bladeSegments);
     
-    // Taper
     const verts = grassGeometry.attributes.position.array;
     for (let i = 0; i < verts.length; i += 3) {
       if (verts[i + 1] > bladeHeight / 2 - 0.001) {
@@ -400,7 +399,6 @@ export class GrassScene {
     grassGeometry.attributes.position.needsUpdate = true;
     grassGeometry.translate(0, bladeHeight / 2, 0);
 
-    // Random Seeds
     const randomSeeds = new Float32Array(grassCount);
     for (let i = 0; i < grassCount; i++) randomSeeds[i] = Math.random();
     grassGeometry.setAttribute('aRandomSeed', new THREE.InstancedBufferAttribute(randomSeeds, 1));
@@ -416,7 +414,6 @@ export class GrassScene {
     this.grass.frustumCulled = false;
     this.scene.add(this.grass);
 
-    // Base Positions
     this.grassBasePositions = new Array(grassCount);
     for (let i = 0; i < grassCount; i++) {
       this.grassBasePositions[i] = {
@@ -426,6 +423,25 @@ export class GrassScene {
       };
     }
     this.dummy = new THREE.Object3D();
+  }
+
+  // === UPDATES ===
+
+  evaluateTier(width) {
+    const isMobile = width < 768;
+    const coreCount = navigator.hardwareConcurrency || 4;
+    
+    if (isMobile) {
+        return (coreCount <= 4) ? 4 : 3;
+    } else {
+        return (coreCount <= 4) ? 2 : 1;
+    }
+  }
+
+  adjustDPR(width) {
+      const newTierIndex = this.evaluateTier(width);
+      this.currentTierIndex = newTierIndex;
+      this.applyQualityTier(newTierIndex);
   }
 
   applyQualityTier(tierIndex) {
@@ -447,20 +463,12 @@ export class GrassScene {
   }
 
   updateGroundToViewport() {
-    // On mobile (<768px), we LOCK the ground scale to the initial aspect ratio.
-    // This prevents the ground from 'shrinking' horizontally when the URL bar hides
-    // (which increases height -> decreases aspect ratio).
-    // Usage: We treat the initial state as the "max width" state.
     const isMobile = window.innerWidth < 768;
     const aspect = isMobile ? this.initialAspect : this.camera.aspect;
-    
     this.ground.scale.set(aspect, 1, 1);
   }
 
   updateScrollState(currentY) {
-    // Optimized for Mobile: Use absolute pixel scroll instead of relative viewport-height.
-    // 0.0005 means 2000px of scroll = 1 full texture/conveyor cycle.
-    // This decouples the speed from the dynamic window.innerHeight on mobile.
     const SCROLL_NORM_PER_PIXEL = 0.0005;
     this.scrollOffsetNormZ = currentY * SCROLL_NORM_PER_PIXEL;
 
@@ -511,7 +519,6 @@ export class GrassScene {
   update(time, dt) {
     this.uniforms.time.value = time;
 
-    // Interaction Logic
     let mouseUv = null;
     const dir = new THREE.Vector2(0, 0);
 
@@ -549,33 +556,7 @@ export class GrassScene {
     this.renderer.render(this.scene, this.camera);
   }
 
-  mount() {
-    window.addEventListener('pointermove', this.onPointerMove, { capture: true });
-    window.addEventListener('touchstart', this.onTouchMove, { capture: true });
-    window.addEventListener('touchmove', this.onTouchMove, { capture: true });
-    window.addEventListener('pointerout', this.onPointerOut);
-    window.addEventListener('scroll', this.onScroll);
-  }
-
-  unmount() {
-    window.removeEventListener('pointermove', this.onPointerMove, { capture: true });
-    window.removeEventListener('pointerout', this.onPointerOut);
-    window.removeEventListener('touchstart', this.onTouchMove, { capture: true });
-    window.removeEventListener('touchmove', this.onTouchMove, { capture: true });
-    window.removeEventListener('scroll', this.onScroll);
-  }
-
-  dispose() {
-      // Clean up GPU resources
-      this.ground.geometry.dispose();
-      this.ground.material.dispose();
-      this.grass.geometry.dispose();
-      this.grass.material.dispose();
-      this.windField.rtA.dispose();
-      this.windField.rtB.dispose();
-      this.windField.mesh.geometry.dispose();
-      this.windField.material.dispose();
-  }
+  // === EVENTS ===
 
   onPointerMove = (e) => {
     const t = (e.touches && e.touches[0]) || (e.changedTouches && e.changedTouches[0]) || e;
@@ -583,9 +564,6 @@ export class GrassScene {
   }
 
   onTouchMove = (e) => {
-     // Prevent default to stop scrolling IF we want full control, 
-     // but usually we want to allow scrolling. 
-     // For wind effect, we just want to read the position.
      const t = e.touches[0];
      if (t) {
          this.updateMousePosition(t.clientX, t.clientY);

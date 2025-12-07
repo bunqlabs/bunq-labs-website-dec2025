@@ -2,11 +2,61 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 export class MountainScene {
+  
+  // === LIFECYCLE ===
+
   constructor(renderer) {
     this.renderer = renderer;
     this.scene = new THREE.Scene();
     
-    // --- Camera ---
+    this.snowCount = 1000;
+    this.snowArea = { x: 0.5, y: 0.5, z: 0.5 };
+    this.lightUpdateFrame = 0;
+
+    this.initCamera();
+    this.init();
+  }
+
+  init() {
+    this.initBackground();
+    this.initScreen();
+    this.initLoader();
+    this.initSnow();
+  }
+
+  dispose() {
+    window.removeEventListener('click', this.resumeVideo);
+    window.removeEventListener('touchstart', this.resumeVideo);
+    
+    if (this.video) {
+        this.video.pause();
+        this.video.src = '';
+        this.video.load();
+    }
+    
+    if (this.screenMesh) {
+        this.screenMesh.geometry.dispose();
+        this.screenMesh.material.dispose();
+    }
+    
+    if (this.scene.background) this.scene.background.dispose();
+  }
+
+  mount() {
+    window.addEventListener('click', this.resumeVideo, { once: true });
+    window.addEventListener('touchstart', this.resumeVideo, { once: true });
+    if (this.video && this.video.paused) this.video.play().catch(() => {});
+  }
+
+  unmount() {
+    window.removeEventListener('click', this.resumeVideo);
+    window.removeEventListener('touchstart', this.resumeVideo);
+    if (this.video) this.video.pause();
+  }
+
+  // === INITIALIZATION ===
+
+  initCamera() {
     this.camera = new THREE.PerspectiveCamera(
       30,
       window.innerWidth / window.innerHeight,
@@ -14,20 +64,6 @@ export class MountainScene {
       2000
     );
     this.camera.position.set(0, 0, 0.65);
-
-    // --- State ---
-    this.snowCount = 1000;
-    this.snowArea = { x: 0.5, y: 0.5, z: 0.5 };
-    
-    this.init();
-  }
-
-  init() {
-    this.initBackground();
-    this.initScreen();
-    // Post-processing removed for performance
-    this.initLoader();
-    this.initSnow();
   }
 
   initBackground() {
@@ -36,8 +72,8 @@ export class MountainScene {
     canvas.height = 512;
     const ctx = canvas.getContext('2d');
     const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    grad.addColorStop(0, '#000000'); // grey
-    grad.addColorStop(1, '#555555'); // black
+    grad.addColorStop(0, '#000000');
+    grad.addColorStop(1, '#555555');
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     this.bgTexture = new THREE.CanvasTexture(canvas);
@@ -48,7 +84,6 @@ export class MountainScene {
   }
 
   initScreen() {
-    // Light plane
     const screenWidth = 0.192;
     const screenHeight = 0.108;
     const screenLightIntensity = 1000;
@@ -59,7 +94,6 @@ export class MountainScene {
     );
     this.scene.add(this.screenMesh);
 
-    // Video Texture
     this.video = document.createElement('video');
     this.video.src = './showreel/showreel.mp4';
     this.video.muted = true;
@@ -88,7 +122,6 @@ export class MountainScene {
     this.screenLight.rotation.y = Math.PI;
     this.screenMesh.add(this.screenLight);
 
-    // Video Sampling Canvas
     this.sampleCanvas = document.createElement('canvas');
     this.sampleW = 16;
     this.sampleH = 9;
@@ -160,7 +193,7 @@ export class MountainScene {
     this.snowGeo = snowGeo;
   }
 
-  // --- Logic ---
+  // === UPDATES ===
 
   resize(width, height) {
     this.camera.aspect = width / height;
@@ -170,9 +203,7 @@ export class MountainScene {
   updateLightFromVideo() {
     if (!this.video || this.video.readyState < 2) return;
     
-    // Performance: Throttle getImageData to avoid CPU/GPU sync stutter
-    // Run only every 10 frames
-    this.lightUpdateFrame = (this.lightUpdateFrame || 0) + 1;
+    this.lightUpdateFrame++;
     if (this.lightUpdateFrame % 10 !== 0) return;
 
     this.sampleCtx.clearRect(0, 0, this.sampleW, this.sampleH);
@@ -224,48 +255,12 @@ export class MountainScene {
   }
 
   render() {
-    // Direct render, no composer
     this.renderer.render(this.scene, this.camera);
   }
 
-  // --- Events ---
-
-  mount() {
-    window.addEventListener('click', this.resumeVideo, { once: true });
-    window.addEventListener('touchstart', this.resumeVideo, { once: true });
-    if (this.video && this.video.paused) this.video.play().catch(() => {});
-  }
-
-  unmount() {
-    // No specific listeners to remove except the video ones if they haven't fired
-    window.removeEventListener('click', this.resumeVideo);
-    window.removeEventListener('touchstart', this.resumeVideo);
-    if (this.video) this.video.pause();
-  }
+  // === EVENTS ===
 
   resumeVideo = () => {
     if (this.video) this.video.play().catch(() => {});
-  }
-
-  dispose() {
-      // Inputs
-      window.removeEventListener('click', this.resumeVideo);
-      window.removeEventListener('touchstart', this.resumeVideo);
-      
-      // Video
-      if (this.video) {
-          this.video.pause();
-          this.video.src = '';
-          this.video.load();
-      }
-      
-      // Objects
-      if (this.screenMesh) {
-          this.screenMesh.geometry.dispose();
-          this.screenMesh.material.dispose();
-      }
-      
-      // Scene
-      if (this.scene.background) this.scene.background.dispose();
   }
 }
