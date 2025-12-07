@@ -87,7 +87,7 @@ const grassFragmentShader = `
 // === CONFIGURATION ===
 
 const planeSize = 30;
-const MAX_GRASS_COUNT = 50000;
+const MAX_GRASS_COUNT = 25000;
 const grassCount = MAX_GRASS_COUNT; 
 const bladeWidth = 0.4;
 const bladeHeight = 1.2;
@@ -291,10 +291,10 @@ export class GrassScene {
     
     this.QUALITY_TIERS = [
       { count: MAX_GRASS_COUNT, dprMax: 1.0, name: 'High' },
-      { count: 35000, dprMax: 0.75, name: 'Medium-High' },
-      { count: 25000, dprMax: 0.75, name: 'Medium' },
-      { count: 15000, dprMax: 0.5, name: 'Mobile High' },
-      { count: 10000, dprMax: 0.5, name: 'Mobile Low' },
+      { count: 25000, dprMax: 0.75, name: 'Medium-High' },
+      { count: 15000, dprMax: 0.75, name: 'Medium' },
+      { count: 10000, dprMax: 0.5, name: 'Mobile High' },
+      { count: 5000, dprMax: 0.5, name: 'Mobile Low' },
     ];
 
     this.currentTierIndex = this.evaluateTier(window.innerWidth);
