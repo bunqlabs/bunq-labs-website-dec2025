@@ -290,8 +290,8 @@ export class GrassScene {
     this.grassBasePositions = [];
     
     this.QUALITY_TIERS = [
-      { count: MAX_GRASS_COUNT, dprMax: 1.5, name: 'High' },
-      { count: 35000, dprMax: 1.0, name: 'Medium-High' },
+      { count: MAX_GRASS_COUNT, dprMax: 1.0, name: 'High' },
+      { count: 35000, dprMax: 0.75, name: 'Medium-High' },
       { count: 25000, dprMax: 0.75, name: 'Medium' },
       { count: 15000, dprMax: 0.5, name: 'Mobile High' },
       { count: 10000, dprMax: 0.5, name: 'Mobile Low' },
@@ -309,7 +309,7 @@ export class GrassScene {
     
     this.updateGroundToViewport();
     this.applyGrassPositions();
-    this.applyQualityTier(this.currentTierIndex);
+    this.applyQualityTier(this.currentTierIndex, true);
   }
 
   dispose() {
@@ -444,14 +444,15 @@ export class GrassScene {
       this.applyQualityTier(newTierIndex);
   }
 
-  applyQualityTier(tierIndex) {
+  applyQualityTier(tierIndex, forceLog = false) {
     const tier = this.QUALITY_TIERS[tierIndex];
     if (this.grass) {
       this.grass.count = Math.min(grassCount, tier.count);
     }
     const targetDPR = Math.min(window.devicePixelRatio || 1, tier.dprMax);
-    if (this.renderer.getPixelRatio() !== targetDPR) {
+    if (this.renderer.getPixelRatio() !== targetDPR || forceLog) {
        this.renderer.setPixelRatio(targetDPR);
+       console.log(`[DPR] Set to ${targetDPR.toFixed(2)} (Tier: ${tier.name})`);
     }
   }
 
