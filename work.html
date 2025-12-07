@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Grass - About</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <div id="canvas-container">
+        <div id="webgl"></div>
+    </div>
+
+    <nav style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
+        <a href="index.html" style="color: white; margin-right: 10px;">Home</a>
+        <a href="about.html" style="color: white;">About</a>
+        <a href="work.html" style="color: white;">Work</a>
+    </nav>
+
+    <main data-barba="wrapper">
+        <div data-barba="container" data-namespace="work">
+
+            <div
+                style="height: 100vh; display: flex; align-items: center; justify-content: center; position: relative;">
+                <h1 style="color: white; font-family: sans-serif; text-align: center;">About Page<br><small>Only Grass
+                        Background</small></h1>
+            </div>
+            <div
+                style="height: 100vh; display: flex; align-items: center; justify-content: center; position: relative;">
+                <h1 style="color: white; font-family: sans-serif; text-align: center;">About Page<br><small>Only Grass
+                        Background</small></h1>
+            </div>
+            <div
+                style="height: 100vh; display: flex; align-items: center; justify-content: center; position: relative;">
+                <h1 style="color: white; font-family: sans-serif; text-align: center;">About Page<br><small>Only Grass
+                        Background</small></h1>
+            </div>
+
+        </div>
+    </main>
+
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.169.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/"
+        }
+      }
+    </script>
+    <script src="https://unpkg.com/@barba/core"></script>
+    <script type="module" src="./js/main.js"></script>
+</body>
+
+</html>
