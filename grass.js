@@ -120,6 +120,37 @@ const cameraConfig = {
 
 // === HELPERS ===
 
+// === HELPERS ===
+
+class PerformanceMonitor {
+  constructor(onDrop) {
+    this.onDrop = onDrop;
+    this.frames = 0;
+    this.timeAccum = 0;
+    this.checkInterval = 5.0; // Check every 5s
+    this.warmupTime = 3.0; // Ignore first 3s
+    this.totalTime = 0;
+  }
+
+  update(dt) {
+    this.totalTime += dt;
+    if (this.totalTime < this.warmupTime) return;
+
+    this.frames++;
+    this.timeAccum += dt;
+
+    if (this.timeAccum >= this.checkInterval) {
+      const avgFps = this.frames / this.timeAccum;
+      if (avgFps < 30) {
+        this.onDrop(avgFps);
+      }
+      // Reset for next interval
+      this.frames = 0;
+      this.timeAccum = 0;
+    }
+  }
+}
+
 class WindField {
   constructor(renderer, size = 256, params = {}) {
     this.renderer = renderer;
@@ -289,15 +320,9 @@ export class GrassScene {
     this.scrollOffsetNormZ = 0;
     this.grassBasePositions = [];
     
-    this.QUALITY_TIERS = [
-      { count: MAX_GRASS_COUNT, dprMax: 1.0, name: 'High' },
-      { count: 25000, dprMax: 0.75, name: 'Medium-High' },
-      { count: 15000, dprMax: 0.75, name: 'Medium' },
-      { count: 10000, dprMax: 0.5, name: 'Mobile High' },
-      { count: 5000, dprMax: 0.5, name: 'Mobile Low' },
-    ];
-
-    this.currentTierIndex = this.evaluateTier(window.innerWidth);
+    // Performance State
+    this.perfMonitor = new PerformanceMonitor(this.onPerformanceDrop.bind(this));
+    this.currentScaleDPR = 1.0; // Multiplier applied to base DPR
 
     this.initCamera();
     this.init();
@@ -309,7 +334,9 @@ export class GrassScene {
     
     this.updateGroundToViewport();
     this.applyGrassPositions();
-    this.applyQualityTier(this.currentTierIndex, true);
+    
+    // Initial performance setup
+    this.updatePerformanceConfig(window.innerWidth, window.innerHeight);
   }
 
   dispose() {
@@ -425,35 +452,55 @@ export class GrassScene {
     this.dummy = new THREE.Object3D();
   }
 
-  // === UPDATES ===
+  // === PERFORMANCE & UPDATES ===
 
-  evaluateTier(width) {
-    const isMobile = width < 768;
-    const coreCount = navigator.hardwareConcurrency || 4;
+  updatePerformanceConfig(width, height) {
+    const aspect = width / height;
     
-    if (isMobile) {
-        return (coreCount <= 4) ? 4 : 3;
-    } else {
-        return (coreCount <= 4) ? 2 : 1;
-    }
-  }
-
-  adjustDPR(width) {
-      const newTierIndex = this.evaluateTier(width);
-      this.currentTierIndex = newTierIndex;
-      this.applyQualityTier(newTierIndex);
-  }
-
-  applyQualityTier(tierIndex, forceLog = false) {
-    const tier = this.QUALITY_TIERS[tierIndex];
+    // 1. Grass Count Logic: aspectRatio * 20000
+    const rawCount = Math.floor(aspect * 20000);
+    const targetCount = Math.min(MAX_GRASS_COUNT, rawCount);
+    
     if (this.grass) {
-      this.grass.count = Math.min(grassCount, tier.count);
+        this.grass.count = targetCount;
+        console.log(`[Performance] Grass count set to ${targetCount} (Aspect: ${aspect.toFixed(2)})`);
     }
-    const targetDPR = Math.min(window.devicePixelRatio || 1, tier.dprMax);
-    if (this.renderer.getPixelRatio() !== targetDPR || forceLog) {
-       this.renderer.setPixelRatio(targetDPR);
-       console.log(`[DPR] Set to ${targetDPR.toFixed(2)} (Tier: ${tier.name})`);
-    }
+
+    // 2. Base DPR Logic: min(aspectRatio, 1), with 0.6 floor
+    const baseDPR = Math.max(0.6, Math.min(aspect, 1.0));
+    
+    // Apply current scaling from potential FPS drops
+    this.applyDPR(baseDPR * this.currentScaleDPR);
+  }
+
+  applyDPR(targetDPR) {
+      const dpr = Math.min(window.devicePixelRatio || 1, targetDPR);
+      if (Math.abs(this.renderer.getPixelRatio() - dpr) > 0.01) {
+          this.renderer.setPixelRatio(dpr);
+          console.log(`[Performance] DPR set to ${dpr.toFixed(2)} (Target: ${targetDPR.toFixed(2)})`);
+      }
+  }
+
+  onPerformanceDrop(fps) {
+      console.warn(`[Performance] FPS drop detected (${fps.toFixed(1)}). Scaling down DPR.`);
+      this.currentScaleDPR *= 0.8;
+      
+      // Re-calculate using current dimensions but new scale
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const aspect = width / height;
+      const baseDPR = Math.max(0.6, Math.min(aspect, 1.0));
+      
+      this.applyDPR(baseDPR * this.currentScaleDPR);
+  }
+
+  // Helper for main.js to call if it wants to forward resizing
+  adjustDPR(width) {
+     // Now handled in resize() generally, but keeping method if main.js calls it specially
+     // Actually main.js calls this separate from resize.
+     // We can just alias it to a partial update or ignore if resize handles it.
+     // For safety, let's just re-run the config logic.
+     this.updatePerformanceConfig(width, window.innerHeight);
   }
 
   resize(width, height) {
@@ -461,6 +508,9 @@ export class GrassScene {
     this.camera.updateProjectionMatrix();
     this.updateGroundToViewport();
     this.updateScrollState(window.scrollY);
+    
+    // Update performance settings on resize
+    this.updatePerformanceConfig(width, height);
   }
 
   updateGroundToViewport() {
@@ -519,6 +569,7 @@ export class GrassScene {
 
   update(time, dt) {
     this.uniforms.time.value = time;
+    this.perfMonitor.update(dt);
 
     let mouseUv = null;
     const dir = new THREE.Vector2(0, 0);

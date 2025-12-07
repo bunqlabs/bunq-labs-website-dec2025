@@ -37,7 +37,7 @@ container.appendChild(renderer.domElement);
 const mountainScene = new MountainScene(renderer);
 const grassScene = new GrassScene(renderer);
 
-grassScene.adjustDPR(container.clientWidth);
+
 renderer.setSize(container.clientWidth, container.clientHeight);
 mountainScene.resize(container.clientWidth, container.clientHeight);
 grassScene.resize(container.clientWidth, container.clientHeight);
@@ -90,7 +90,7 @@ window.addEventListener('resize', () => {
     const w = container.clientWidth;
     const h = container.clientHeight;
     
-    grassScene.adjustDPR(w);
+
     renderer.setSize(w, h);
     mountainScene.resize(w, h);
     grassScene.resize(w, h);
