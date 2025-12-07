@@ -44,14 +44,26 @@ grassScene.resize(container.clientWidth, container.clientHeight);
 
 // === LOGIC ===
 
-function scanMountainRect() {
-    if (!mountainEl) return;
+// Cache the mountain element's configuration (position relative to document top)
+let mountainConfig = { top: 0, height: 0, left: 0, width: 0 };
+let currentScrollY = window.scrollY;
+
+function calcMountainConfig() {
+    if (!mountainEl) {
+        mountainConfig.height = 0;
+        return;
+    }
+    // We get the rect once to know where it is largely
+    // But since it's the hero, it's usually at the top. 
+    // However, to be safe and generic:
     const rect = mountainEl.getBoundingClientRect();
-    mountainRect.left = rect.left;
-    mountainRect.top = rect.top;
-    mountainRect.bottom = rect.bottom;
-    mountainRect.width = rect.width;
-    mountainRect.height = rect.height;
+    const scrollTop = window.scrollY || document.documentElement.scrollTop;
+    
+    mountainConfig.top = rect.top + scrollTop;
+    mountainConfig.left = rect.left; // Assuming no horizontal scroll for main layout
+    mountainConfig.width = rect.width;
+    mountainConfig.height = rect.height;
+    mountainConfig.bottom = mountainConfig.top + rect.height;
 }
 
 function updateRouteState(namespace, container) {
@@ -61,7 +73,7 @@ function updateRouteState(namespace, container) {
         
         if (mountainEl) {
             mountainScene.mount();
-            scanMountainRect();
+            calcMountainConfig();
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
             renderer.toneMappingExposure = 1.0;
         } else {
@@ -80,8 +92,10 @@ function updateRouteState(namespace, container) {
 
 // === EVENTS ===
 
-window.addEventListener('scroll', scanMountainRect, { passive: true });
-window.addEventListener('resize', scanMountainRect, { passive: true });
+// Just track scroll Y, don't do heavy layout Reads
+window.addEventListener('scroll', () => {
+    currentScrollY = window.scrollY;
+}, { passive: true });
 
 window.addEventListener('resize', () => {
     if (Math.abs(window.innerWidth - lastWindowWidth) < 2) return;
@@ -90,11 +104,13 @@ window.addEventListener('resize', () => {
     const w = container.clientWidth;
     const h = container.clientHeight;
     
-
     renderer.setSize(w, h);
     mountainScene.resize(w, h);
     grassScene.resize(w, h);
-});
+    
+    // update cache
+    calcMountainConfig();
+}, { passive: true });
 
 // === BARBA SETUP ===
 
@@ -137,16 +153,33 @@ function animate() {
     grassScene.update(time, dt);
     grassScene.render();
 
-    if (isHome && mountainEl && mountainRect.height > 0) {
-        const { left, bottom, width, height, top } = mountainRect;
+    if (isHome && mountainConfig.height > 0) {
+        // Calculate current viewport rect for mountain
+        // viewportTop = mountainConfig.top - currentScrollY
+        const viewTop = mountainConfig.top - currentScrollY;
+        const viewBottom = viewTop + mountainConfig.height;
 
-        if (bottom > 0 && top < window.innerHeight) { 
-            renderer.setScissor(left, window.innerHeight - bottom, width, height);
-            renderer.setViewport(left, window.innerHeight - bottom, width, height);
-            renderer.setScissorTest(true);
-            renderer.clearDepth(); 
-            mountainScene.update(time, dt);
-            mountainScene.render();
+        // Intersection consistency check
+        // We only render if it intersects with the viewport (0 to window.innerHeight)
+        if (viewBottom > 0 && viewTop < window.innerHeight) { 
+             // scissor needs (x, y, w, h) where y is from *bottom*
+             // so y_scissor = window.innerHeight - (viewTop + height) NO
+             // y_scissor = window.innerHeight - (rect.bottom)
+             
+             // rect.bottom in viewport coords = viewBottom
+             const scissorsBottom = window.innerHeight - viewBottom;
+             
+             // Ensure we don't pass negative values if it's partially offscreen?
+             // THREE handles clipping but scissor parameters must be valid?
+             // Typically scissor region:
+             // left, bottom, width, height
+             
+             renderer.setScissor(mountainConfig.left, scissorsBottom, mountainConfig.width, mountainConfig.height);
+             renderer.setViewport(mountainConfig.left, scissorsBottom, mountainConfig.width, mountainConfig.height);
+             renderer.setScissorTest(true);
+             renderer.clearDepth(); 
+             mountainScene.update(time, dt);
+             mountainScene.render();
         }
     }
 

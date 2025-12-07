@@ -355,7 +355,9 @@ export class GrassScene {
     window.addEventListener('touchstart', this.onTouchMove, { capture: true });
     window.addEventListener('touchmove', this.onTouchMove, { capture: true });
     window.addEventListener('pointerout', this.onPointerOut);
-    window.addEventListener('scroll', this.onScroll);
+    
+    // Initial cache calculation
+    this.cacheBendElements();
   }
 
   unmount() {
@@ -363,7 +365,6 @@ export class GrassScene {
     window.removeEventListener('pointerout', this.onPointerOut);
     window.removeEventListener('touchstart', this.onTouchMove, { capture: true });
     window.removeEventListener('touchmove', this.onTouchMove, { capture: true });
-    window.removeEventListener('scroll', this.onScroll);
   }
 
   // === INITIALIZATION ===
@@ -507,6 +508,10 @@ export class GrassScene {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.updateGroundToViewport();
+    
+    // Cache positions on resize as layout might change
+    this.cacheBendElements();
+    
     this.updateScrollState(window.scrollY);
     
     // Update performance settings on resize
@@ -528,23 +533,46 @@ export class GrassScene {
     this.uniforms.scrollOffsetNorm.value = this.scrollOffsetNormZ;
     this.uniforms.planeExtent.value.set(planeSize * this.ground.scale.x, extentZ);
 
-    this.updateBendElements();
+    this.updateBendElements(currentY);
   }
 
-  updateBendElements() {
-    const BEND_MAX_DEG = -8;
-    const centerY = window.innerHeight / 2;
-    const els = document.querySelectorAll('[data-bend-on-scroll]');
+  cacheBendElements() {
+      this.bendCache = [];
+      const els = document.querySelectorAll('[data-bend-on-scroll]');
+      const scrollTop = window.scrollY || document.documentElement.scrollTop;
+      
+      els.forEach(el => {
+          const rect = el.getBoundingClientRect();
+          const maxDeg = isNaN(parseFloat(el.dataset.bendMax)) ? -8 : parseFloat(el.dataset.bendMax);
+          this.bendCache.push({
+              el: el,
+              top: rect.top + scrollTop,
+              height: rect.height,
+              maxDeg: maxDeg
+          });
+      });
+  }
+
+  updateBendElements(currentY) {
+    if (!this.bendCache) return;
     
-    els.forEach((el) => {
-      const rect = el.getBoundingClientRect();
-      const elCenter = rect.top + rect.height / 2;
-      const t = (elCenter - centerY) / centerY;
-      const onlyBottom = Math.max(0, Math.min(1, t));
-      const maxDeg = isNaN(parseFloat(el.dataset.bendMax)) ? BEND_MAX_DEG : parseFloat(el.dataset.bendMax);
-      const angle = -onlyBottom * maxDeg;
-      el.style.transform = `perspective(1000px) rotateX(${angle}deg)`;
-    });
+    const centerY = window.innerHeight / 2;
+    // We want to calculate the element's position relative to the viewport
+    // viewportY = docTop - currentY
+    
+    for (let i = 0; i < this.bendCache.length; i++) {
+        const item = this.bendCache[i];
+        const rectTop = item.top - currentY;
+        const elCenter = rectTop + item.height / 2;
+        
+        const t = (elCenter - centerY) / centerY;
+        const onlyBottom = Math.max(0, Math.min(1, t));
+        const angle = -onlyBottom * item.maxDeg;
+        
+        // This style update is still DOM writing, but avoids reading
+        // We could optimize by only writing if changed significantly, but rotateX is usually optimized by browser compositors
+        item.el.style.transform = `perspective(1000px) rotateX(${angle}deg)`;
+    }
   }
 
   applyGrassPositions() {
@@ -570,6 +598,9 @@ export class GrassScene {
   update(time, dt) {
     this.uniforms.time.value = time;
     this.perfMonitor.update(dt);
+    
+    // Update scroll state every frame (cheap if optimized) or check strict inequality
+    this.updateScrollState(window.scrollY);
 
     let mouseUv = null;
     const dir = new THREE.Vector2(0, 0);
@@ -635,7 +666,4 @@ export class GrassScene {
     }
   }
 
-  onScroll = () => {
-      this.updateScrollState(window.scrollY);
-  }
 }
