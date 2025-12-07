@@ -7,7 +7,7 @@ body {
 #main-wrapper {
   position: relative;
   width: 100vw;
-  height: 500dvh;
+  height: 500lvh;
 }
 
 #canvas-container {
@@ -46,7 +46,7 @@ body {
 .section-2 {
   position: relative;
   width: 100vw;
-  height: 100dvh;
+  height: 100lvh;
   z-index: 10;
   pointer-events: none;
 }

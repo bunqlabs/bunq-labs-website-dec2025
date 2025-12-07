@@ -170,6 +170,11 @@ export class MountainScene {
   updateLightFromVideo() {
     if (!this.video || this.video.readyState < 2) return;
     
+    // Performance: Throttle getImageData to avoid CPU/GPU sync stutter
+    // Run only every 10 frames
+    this.lightUpdateFrame = (this.lightUpdateFrame || 0) + 1;
+    if (this.lightUpdateFrame % 10 !== 0) return;
+
     this.sampleCtx.clearRect(0, 0, this.sampleW, this.sampleH);
     this.sampleCtx.drawImage(this.video, 0, 0, this.sampleW, this.sampleH);
     const data = this.sampleCtx.getImageData(0, 0, this.sampleW, this.sampleH).data;

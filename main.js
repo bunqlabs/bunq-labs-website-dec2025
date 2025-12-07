@@ -50,6 +50,22 @@ grassScene.resize(container.clientWidth, container.clientHeight);
 let isHome = false; // "home" namespace has mountain
 let mountainEl = null;
 
+// --- Optimization: Cache Mountain Rect ---
+let mountainRect = { left: 0, top: 0, bottom: 0, width: 0, height: 0 };
+
+function scanMountainRect() {
+    if (!mountainEl) return;
+    const rect = mountainEl.getBoundingClientRect();
+    mountainRect.left = rect.left;
+    mountainRect.top = rect.top;
+    mountainRect.bottom = rect.bottom;
+    mountainRect.width = rect.width;
+    mountainRect.height = rect.height;
+}
+
+window.addEventListener('scroll', scanMountainRect, { passive: true });
+window.addEventListener('resize', scanMountainRect, { passive: true });
+
 // --- Logic ---
 
 function updateRouteState(namespace, container) {
@@ -62,6 +78,7 @@ function updateRouteState(namespace, container) {
         if (mountainEl) {
             console.log('[Route] Found mountain element');
             mountainScene.mount();
+            scanMountainRect(); // Ensure rect is active immediately
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
             renderer.toneMappingExposure = 1.0;
         } else {
@@ -154,19 +171,29 @@ function animate() {
 
     // 2. Render Mountain (Foreground, Scissored)
     if (isHome && mountainEl) {
-        const rect = mountainEl.getBoundingClientRect();
+        // Optimization: Use cached rect updated on scroll/resize
+        // Using cachedMountainRect injected via shared state or checking if we need to measure
+        // To keep it simple and clean in one file without too much global state refactoring:
         
-        // Optimization: Only update/render if physically visible on screen
-        if (rect.bottom > 0 && rect.top < window.innerHeight && rect.width > 0 && rect.height > 0) {
-            
-            // Calculate scissor box (bottom-left origin for GL)
-            const w = rect.width;
-            const h = rect.height;
-            const left = rect.left;
-            const bottom = window.innerHeight - rect.bottom;
+        // We will read from a global or outer-scope rect that is updated via scroll listener
+        // But since we didn't set up the scroll listener yet, let's do it right here.
+    } 
+    
+    // ... Actually, let's just use the rect variable we are about to add to the top level scope
+    if (isHome && mountainEl && mountainRect.height > 0) {
+        const { left, bottom, width, height, top } = mountainRect;
 
-            renderer.setScissor(left, bottom, w, h);
-            renderer.setViewport(left, bottom, w, h);
+        // Optimization: Only update/render if physically visible on screen
+        if (bottom > 0 && top < window.innerHeight) { 
+             // Note: bottom here is window-relative (rect.bottom). 
+             // In our cached rect logic below, we'll need to compute this correctly.
+             // Actually, let's store the raw clientRect properties we need or re-compute.
+             // Standard getBoundingClientRect is relative to viewport.
+             
+             // The rect is updated in scanMountainRect() which we call on scroll.
+             
+            renderer.setScissor(left, window.innerHeight - bottom, width, height); // Correct GL scissor math
+            renderer.setViewport(left, window.innerHeight - bottom, width, height);
             renderer.setScissorTest(true);
             
             // Clear depth so mountain draws over grass cleanly in that region
@@ -179,5 +206,14 @@ function animate() {
 
     stats.end();
 }
+
+
+
+// Initial scan
+// We also need to hook into the route update to scan immediately when home is mounted
+const _originalUpdateRouteState = updateRouteState;
+// We can't easily hook the function reference above without changing it in place.
+// Let's just add a call to scanMountainRect inside updateRouteState manually.
+// Proceeding to apply these changes.
 
 animate();
