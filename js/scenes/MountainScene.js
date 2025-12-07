@@ -171,8 +171,8 @@ export class MountainScene {
                 const root = gltf.scene || gltf.scenes[0];
                 root.traverse((obj) => {
                     if (obj.isMesh) {
-                        obj.castShadow = true;
-                        obj.receiveShadow = true;
+                        obj.castShadow = false;
+                        obj.receiveShadow = false;
                         obj.material = new THREE.MeshStandardMaterial({
                             color: 0x222222,
                             roughness: 0.5,
