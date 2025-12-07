@@ -1,6 +1,37 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
+// === HELPERS ===
+
+class PerformanceMonitor {
+  constructor(onDrop) {
+    this.onDrop = onDrop;
+    this.frames = 0;
+    this.timeAccum = 0;
+    this.checkInterval = 5.0; // Check every 5s
+    this.warmupTime = 3.0; // Ignore first 3s
+    this.totalTime = 0;
+  }
+
+  update(dt) {
+    this.totalTime += dt;
+    if (this.totalTime < this.warmupTime) return;
+
+    this.frames++;
+    this.timeAccum += dt;
+
+    if (this.timeAccum >= this.checkInterval) {
+      const avgFps = this.frames / this.timeAccum;
+      if (avgFps < 30) {
+        this.onDrop(avgFps);
+      }
+      // Reset for next interval
+      this.frames = 0;
+      this.timeAccum = 0;
+    }
+  }
+}
+
 export class MountainScene {
   
   // === LIFECYCLE ===
@@ -12,6 +43,10 @@ export class MountainScene {
     this.snowCount = 1000;
     this.snowArea = { x: 0.5, y: 0.5, z: 0.5 };
     this.lightUpdateFrame = 0;
+    
+    // Performance State
+    this.perfMonitor = new PerformanceMonitor(this.onPerformanceDrop.bind(this));
+    this.currentScaleDPR = 1.0;
 
     this.initCamera();
     this.init();
@@ -22,6 +57,9 @@ export class MountainScene {
     this.initScreen();
     this.initLoader();
     this.initSnow();
+    
+    // Initial performance setup
+    this.updatePerformanceConfig(window.innerWidth, window.innerHeight);
   }
 
   dispose() {
@@ -193,11 +231,44 @@ export class MountainScene {
     this.snowGeo = snowGeo;
   }
 
-  // === UPDATES ===
+  // === PERFORMANCE & UPDATES ===
+
+  updatePerformanceConfig(width, height) {
+    const aspect = width / height;
+
+    // Base DPR Logic: min(aspectRatio, 1), with 0.6 floor
+    const baseDPR = Math.max(0.6, Math.min(aspect, 1.0));
+    
+    // Apply current scaling from potential FPS drops
+    this.applyDPR(baseDPR * this.currentScaleDPR);
+  }
+
+  applyDPR(targetDPR) {
+      const dpr = Math.min(window.devicePixelRatio || 1, targetDPR);
+      if (Math.abs(this.renderer.getPixelRatio() - dpr) > 0.01) {
+          this.renderer.setPixelRatio(dpr);
+          console.log(`[Mountain Performance] DPR set to ${dpr.toFixed(2)} (Target: ${targetDPR.toFixed(2)})`);
+      }
+  }
+
+  onPerformanceDrop(fps) {
+      console.warn(`[Mountain Performance] FPS drop detected (${fps.toFixed(1)}). Scaling down DPR.`);
+      this.currentScaleDPR *= 0.8;
+      
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      const aspect = width / height;
+      const baseDPR = Math.max(0.6, Math.min(aspect, 1.0));
+      
+      this.applyDPR(baseDPR * this.currentScaleDPR);
+  }
 
   resize(width, height) {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
+
+    // Update performance settings on resize
+    this.updatePerformanceConfig(width, height);
   }
 
   updateLightFromVideo() {
@@ -250,6 +321,7 @@ export class MountainScene {
   }
 
   update(time, dt) {
+    this.perfMonitor.update(dt);
     this.updateLightFromVideo();
     this.updateSnow(time, dt);
   }
