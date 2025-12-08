@@ -14,10 +14,9 @@ export const Config = {
 
         scrollNormPerPixel: 0.0005,
         maxGrassCount: 15000,
-        maxGrassCount: 15000,
-        mobileMaxGrassCount: 5000,
-        mobileDPR: 0.8, // Force lower resolution on mobile
-        minDPR: 0.8, // Absolute minimum DPR
+        mobileMaxGrassCount: 10000,
+        mobileDPR: 1, // Force lower resolution on mobile
+        minDPR: 1, // Absolute minimum DPR
         bladeWidth: 0.4,
         bladeHeight: 1.2,
         bladeSegments: 1,
