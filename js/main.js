@@ -251,66 +251,55 @@ function animate() {
     const dt = clock.getDelta();
 
     // Default viewport for full screen
+    // Default viewport for full screen
     renderer.setViewport(0, 0, container.clientWidth, container.clientHeight);
-    renderer.setScissorTest(false); // Reset scissor test at the start of each frame
+    renderer.setScissorTest(false);
 
-    // Calculate visibility
+    // Update MountainScene "Relative Scroll" position
+    mountainScene.updateScroll(currentScrollY);
+
+    // Visibility Check
     mountainVisible = false;
-
-    // Viewport check:
-    // Element is visible if:
-    // mountainConfig.bottom > currentScrollY  AND  mountainConfig.top < currentScrollY + window.innerHeight
-
-    // NOTE: Force visibility if we are transitioning to Home (fixes glitch where layout isn't ready)
     if (isHome && mountainConfig.height > 0) {
-        if (isTransitioning || (mountainConfig.bottom - currentScrollY > 0 && mountainConfig.top - currentScrollY < window.innerHeight)) {
+        // Simple check: is it effectively on screen? (Since it scrolls up, we just check if top < window height)
+        const elTop = mountainConfig.top - currentScrollY;
+        if (elTop + mountainConfig.height > 0 && elTop < window.innerHeight) {
             mountainVisible = true;
         }
     }
 
+    // RENDER ORDER:
+    // 1. Grass (Background)
+
+    // Push the VIRTUAL (continuous) scroll state to grass
+    grassScene.updateScrollState(virtualScrollY);
+    grassScene.update(time, dt);
+    grassScene.render();
+
+    // 2. Mountain (Foreground / relative scroll overlay)
     if (mountainVisible) {
-        // SCISSOR TEST LOGIC
-        // We need to map the content div's rect to WebGL coordinates (bottom-left origin)
+        // No scissor needed, it moves naturally via updateScroll()
+        // We do NOT clear depth, as we want to draw Over/With grass if transparency exists
+        // But Mountain has its own background mesh, so it will occlude grass naturally.
 
-        // Element Top relative to viewport:
-        const elTop = mountainConfig.top - currentScrollY;
-        const elHeight = mountainConfig.height;
+        // However, if we want Mountain to be "atop", we should clear depth or rely on Z-buffer
+        // Since Mountain is at Z ~0.65 to 0 (camera relative), and Grass is... ?
+        // Grass camera is at 0, 20, 0 looking at 0,0,0.
+        // They are separate scenes/cameras. Z-buffer is cleared between renders unless autoClear=false.
 
-        // WebGL Scissor Y (from bottom):
-        // Canvas Height - (Element Top + Element Height)
-        // If elTop is 0 (at top), Y = H - (0 + H) = 0.
-        const scissorY = container.clientHeight - (elTop + elHeight);
+        // Default Three.js renderer.render() clears buffer if autoClear=true.
+        // We want to Overlay.
 
-        // Clamping to avoid crazy values
-        // Note: scissorY can be negative if scrolled up, that's fine, GL handles clipping or we clamp
-        const safeY = Math.max(0, scissorY);
+        renderer.autoClear = false;
+        renderer.clearDepth(); // Clear depth so Mountain draws on top of Grass
 
-        if (isTransitioning) {
-            // During transition, render the mountain scene full screen
-            renderer.setScissorTest(true);
-            renderer.setScissor(0, 0, container.clientWidth, container.clientHeight);
-            renderer.setViewport(0, 0, container.clientWidth, container.clientHeight);
-        } else {
-            // Normal Scissor based on element position
-            renderer.setScissorTest(true);
-            renderer.setScissor(mountainConfig.left, safeY, mountainConfig.width, elHeight);
-            // Match viewport to scissor to make the content "stick" to the div (Relative behavior)
-            renderer.setViewport(mountainConfig.left, safeY, mountainConfig.width, elHeight);
-        }
-
-        renderer.clearDepth();
         mountainScene.update(time, dt);
         mountainScene.render();
+
+        renderer.autoClear = true; // Restore for next frame
     }
 
-    // Only update/render grass if mountain is NOT taking over
-    if (!mountainVisible) {
-        // Push the VIRTUAL (continuous) scroll state to grass
-        grassScene.updateScrollState(virtualScrollY);
 
-        grassScene.update(time, dt);
-        grassScene.render();
-    }
 
     // Update scroll bending effect independently of scenes
     scrollBender.update(currentScrollY);

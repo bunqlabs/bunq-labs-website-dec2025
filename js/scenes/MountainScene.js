@@ -12,6 +12,10 @@ export class MountainScene {
         this.renderer = renderer;
         this.scene = new THREE.Scene();
 
+        // Create a root group for all scrolling content
+        this.contentGroup = new THREE.Group();
+        this.scene.add(this.contentGroup);
+
         this.snowCount = Config.Mountain.snowCount;
         this.snowArea = Config.Mountain.snowArea;
         this.lightUpdateFrame = 0;
@@ -109,7 +113,25 @@ export class MountainScene {
         this.bgTexture.colorSpace = THREE.SRGBColorSpace;
         this.bgTexture.minFilter = THREE.LinearFilter;
         this.bgTexture.magFilter = THREE.LinearFilter;
-        this.scene.background = this.bgTexture;
+
+        // Replace scene.background (fixed) with a regular Mesh (scrollable)
+        // Adjust plane size/position to cover viewport at z=0 (approximately)
+        // With FOV 40 and Camera Z 0.65, height at Z=0 is approx 0.47 units
+        // We make it slightly larger to be safe.
+        const planeH = 2.0;
+        const planeW = planeH * (window.innerWidth / window.innerHeight);
+
+        this.bgMesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(planeW, planeH),
+            new THREE.MeshBasicMaterial({
+                map: this.bgTexture,
+                depthWrite: false,
+                side: THREE.DoubleSide
+            })
+        );
+        // Push it slightly back so other objects are in front
+        this.bgMesh.position.z = -0.5;
+        this.contentGroup.add(this.bgMesh);
     }
 
     initScreen() {
@@ -121,7 +143,7 @@ export class MountainScene {
             new THREE.PlaneGeometry(screenWidth, screenHeight),
             new THREE.MeshBasicMaterial({ color: 0xffffff })
         );
-        this.scene.add(this.screenMesh);
+        this.contentGroup.add(this.screenMesh);
 
         this.video = document.createElement('video');
         this.video.src = './assets/video/showreel.mp4';
@@ -197,7 +219,8 @@ export class MountainScene {
                         });
                     }
                 });
-                this.scene.add(root);
+
+                this.contentGroup.add(root);
             },
             undefined,
             (err) => console.error('[Mountain] Failed to load mountain GLB:', err)
@@ -228,7 +251,7 @@ export class MountainScene {
         });
 
         this.snow = new THREE.Points(snowGeo, snowMat);
-        this.scene.add(this.snow);
+        this.contentGroup.add(this.snow);
         this.snowGeo = snowGeo;
     }
 
@@ -337,5 +360,24 @@ export class MountainScene {
 
     resumeVideo = () => {
         if (this.video) this.video.play().catch(() => { });
+    }
+
+    updateScroll(scrollY) {
+        // approximate visible height conversion
+        // At camera Z=0.65, FOV=40:
+        // Visible Height = 2 * tan(20deg) * 0.65 ~= 0.473
+        // So 1 unit height is window.innerHeight pixels
+
+        // This factor needs to be calibrated visually.
+        // If the viewport height is "H" pixels, that maps to ~0.473 world units at distance 0
+        // Wait, camera is at 0.65, objects are at 0. Distance is 0.65.
+        // h = 2 * 0.65 * tan(20deg) = 1.3 * 0.364 = 0.473
+
+        const visibleHeightAtDist0 = 0.473;
+        const scrollRatio = scrollY / window.innerHeight;
+
+        // We move the GROUP UP (positive Y) as we scroll DOWN.
+        // Total range of 1 viewport height should move the content up by 1 visible height
+        this.contentGroup.position.y = scrollRatio * visibleHeightAtDist0;
     }
 }
