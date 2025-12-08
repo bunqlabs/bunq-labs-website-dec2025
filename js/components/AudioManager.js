@@ -106,7 +106,7 @@ export class AudioManager {
     updateUI() {
         const btn = document.getElementById('audio-toggle');
         if (btn) {
-            btn.textContent = this.isMuted ? 'UNMUTE OFF' : 'SOUND ON';
+            btn.textContent = this.isMuted ? 'SOUND OFF' : 'SOUND ON';
             btn.style.opacity = this.isMuted ? '0.5' : '1.0';
         }
     }
