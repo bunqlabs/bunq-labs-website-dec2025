@@ -327,12 +327,7 @@ export class GrassScene {
     }
 
     updateScrollState(currentY) {
-        // If mobile, keep static (no conveyor belt)
-        if (window.innerWidth < 768) {
-            this.scrollOffsetNormZ = 0;
-            this.applyGrassPositions();
-            return;
-        }
+
 
         const aspect = window.innerWidth / window.innerHeight;
         // Clamp aspect influence for ultrawide fix (so it doesn't move too fast)

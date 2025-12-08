@@ -4,8 +4,7 @@ export const Config = {
         snowArea: { x: 0.5, y: 0.5, z: 0.5 },
         screenWidth: 0.192,
         screenHeight: 0.108,
-        screenLightIntensity: 1000,
-        // Reduced sample size for performance
+        screenLightIntensity: 500,
         videoSampleResolution: { w: 4, h: 4 },
         lightUpdateSkipThreshold: 0.022 // Skip if frame time > 22ms
     },
@@ -20,7 +19,7 @@ export const Config = {
         bladeWidth: 0.4,
         bladeHeight: 1.2,
         bladeSegments: 1,
-        taperFactor: 0.0,
+        taperFactor: 0.1,
         camera: {
             fov: 75,
             near: 0.1,
