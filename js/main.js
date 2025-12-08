@@ -16,6 +16,7 @@ let isHome = false;
 let mountainEl = null;
 let lastWindowWidth = window.innerWidth;
 let mountainVisible = false;
+let lastMountainVisible = false; // Track previous state for transitions
 let transitionGlobalFade = false;
 let isTransitioning = false;
 
@@ -186,7 +187,11 @@ if (barba) {
         },
         transitions: [{
             name: 'fade',
+            sync: false, // Ensure strictly sequential (Leave -> Remove -> Enter)
             leave(data) {
+                // Lock Interaction
+                document.body.classList.add('is-transitioning');
+
                 // Return a Promise to force Barba to wait
                 return new Promise(resolve => {
                     try {
@@ -203,15 +208,23 @@ if (barba) {
 
                         transitionGlobalFade = goingToMountain || comingFromMountain;
 
+                        // TARGET STRATEGY: wrapper (explicit style opacity)
+                        const wrapper = document.querySelector('.main-wrapper');
+
+                        // Action: Set opacity to 0 (Triggers CSS Transition 1s)
+                        if (wrapper) wrapper.style.opacity = '0';
+
+                        // If Global, also fade WebGL (using CSS opacity)
                         if (transitionGlobalFade) {
-                            // activate loader (Legacy behavior, maybe user wants this replaced too? Confirmed unified.)
-                            // Actually user said "Do this instead of tweaking anything else".
-                            // So we should UNIFY LEAVE too.
-                            gsap.to('.main-wrapper, #webgl', { opacity: 0, duration: 0.5, onComplete: resolve });
-                        } else {
-                            // fade wrapper out
-                            gsap.to('.main-wrapper, #webgl', { opacity: 0, duration: 0.5, onComplete: resolve });
+                            const webgl = document.getElementById('webgl');
+                            if (webgl) webgl.style.opacity = '0';
                         }
+
+                        // Wait for transition to finish (1.0s)
+                        setTimeout(() => {
+                            resolve();
+                        }, 1000);
+
                     } catch (err) {
                         console.error(err);
                         resolve();
@@ -219,9 +232,8 @@ if (barba) {
                 });
             },
             beforeEnter(data) {
-                // Ensure new container is visible immediately (since we fade wrapper)
-                // If we assume wrapper is fading, the child should be fully opaque.
-                gsap.set(data.next.container, { opacity: 1 });
+                // Wrapper is already 0 from leave().
+                // No action needed specifically for container.
             },
             enter(data) {
                 return new Promise(resolve => {
@@ -237,19 +249,43 @@ if (barba) {
                         const ns = data.next.namespace || (data.next.container && data.next.container.dataset.namespace);
                         updateRouteState(ns, data.next.container);
 
-                        const delay = (ns === 'home') ? 2.0 : 1.0;
+                        const delay = (ns === 'home') ? 2000 : 1000; // ms
 
-                        // Unified Entrance: Fade In Wrapper AND WebGL
-                        const targets = '.main-wrapper, #webgl';
+                        // TARGET STRATEGY: Target wrapper
+                        const wrapper = document.querySelector('.main-wrapper');
 
-                        // Ensure they start at 0
-                        gsap.set(targets, { opacity: 0 });
+                        // MANUAL CLEANUP: Ensure old container is GONE.
+                        if (data.current.container && data.current.container.parentNode) {
+                            data.current.container.parentNode.removeChild(data.current.container);
+                        }
 
-                        // Fade them in together to 1
-                        return gsap.fromTo(targets,
-                            { opacity: 0 },
-                            { opacity: 1, duration: 0.5, delay: delay, onComplete: resolve }
-                        );
+                        // Ensure Wrapper is 0 (it should be)
+                        // Actually, if coming from external or refresh, CSS is 0.
+                        // If coming from navigation, it's 0.
+
+                        // Add WebGL logic if global
+                        if (transitionGlobalFade) {
+                            // Correct: leave() set it to 0. It persists.
+                        }
+
+                        // Wait for delay, then Reveal
+                        setTimeout(() => {
+                            // 1. Reveal Wrapper via CSS Opacity
+                            if (wrapper) wrapper.style.opacity = '1';
+
+                            // 2. Reveal WebGL via CSS Opacity (if needed)
+                            if (transitionGlobalFade) {
+                                const webgl = document.getElementById('webgl');
+                                if (webgl) webgl.style.opacity = '1';
+                            }
+
+                            // 3. Resolve after transition (1.0s)
+                            setTimeout(() => {
+                                resolve();
+                            }, 1000);
+
+                        }, delay);
+
                     } catch (err) {
                         console.error(err);
                         resolve();
@@ -257,6 +293,9 @@ if (barba) {
                 });
             },
             after(data) {
+                // Unlock Interaction
+                document.body.classList.remove('is-transitioning');
+
                 // (e.g. after previous container is removed and new one shifts up)
                 isTransitioning = false;
                 calcMountainConfig();
@@ -267,10 +306,20 @@ if (barba) {
 }
 
 
-// Force initial Barba container to be visible (it's hidden by CSS to prevent FOUC)
-const initialBarbaContainer = document.querySelector('[data-barba="container"]');
-if (initialBarbaContainer) {
-    gsap.set(initialBarbaContainer, { opacity: 1 });
+// Force initial Wrapper to be visible (it's hidden by CSS to prevent FOUC)
+const initialWrapper = document.querySelector('.main-wrapper');
+if (initialWrapper) {
+    initialWrapper.style.opacity = '1';
+}
+// Force initial WebGL visibility
+const initialWebgl = document.getElementById('webgl');
+if (initialWebgl) {
+    initialWebgl.style.opacity = '1';
+}
+// Force initial Canvas Container (if needed)
+const initialCanvasContainer = document.getElementById('canvas-container');
+if (initialCanvasContainer) {
+    gsap.set(initialCanvasContainer, { opacity: 1 });
 }
 
 // Initial Route Setup
@@ -319,6 +368,16 @@ function animate() {
                 mountainVisible = true;
             }
         }
+    }
+
+    // === VIDEO PLAYBACK CONTROL ===
+    if (mountainVisible !== lastMountainVisible) {
+        if (mountainVisible) {
+            mountainScene.playVideo();
+        } else {
+            mountainScene.pauseVideo();
+        }
+        lastMountainVisible = mountainVisible;
     }
 
     // RENDER ORDER & EXCLUSIVITY:

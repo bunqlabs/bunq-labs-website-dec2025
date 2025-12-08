@@ -78,14 +78,16 @@ export class MountainScene {
         console.log('[Mountain] mount() called');
         window.addEventListener('click', this.resumeVideo, { once: true });
         window.addEventListener('touchstart', this.resumeVideo, { once: true });
-        if (this.video && this.video.paused) this.video.play().catch(() => { });
+        document.addEventListener('visibilitychange', this.handleVisibilityChange);
+        this.playVideo();
     }
 
     unmount() {
         console.log('[Mountain] unmount() called');
         window.removeEventListener('click', this.resumeVideo);
         window.removeEventListener('touchstart', this.resumeVideo);
-        if (this.video) this.video.pause();
+        document.removeEventListener('visibilitychange', this.handleVisibilityChange);
+        this.pauseVideo();
     }
 
     // === INITIALIZATION ===
@@ -331,8 +333,46 @@ export class MountainScene {
 
     // === EVENTS ===
 
+    // === VISIBILITY CONTROL ===
+
+    playVideo() {
+        if (this.video && this.video.paused && !document.hidden) {
+            this.video.play().catch(() => { });
+        }
+    }
+
+    pauseVideo() {
+        if (this.video && !this.video.paused) {
+            this.video.pause();
+        }
+    }
+
+    handleVisibilityChange = () => {
+        if (document.hidden) {
+            this.pauseVideo();
+        } else {
+            // Only resume if we are "active" (mounted and supposedly visible)
+            // Ideally main.js controls this, but for tab Switching, if we are effectively active, we resume.
+            // But we don't know the exact "mountainVisible" state here easily without observing.
+            // Safe fallback: If we are mounted, we assume we might be visible. 
+            // Better: Let main.js handle the "became visible" logic from its loop, 
+            // OR checks if video SHOULD be playing. 
+
+            // Actually, if we just pause on hide, main.js loop will call playVideo() next frame if visible?
+            // No, main.js usually calls methods based on state change.
+
+            if (this.video && this.video.paused) {
+                // We rely on external controller or user interaction to resume usually?
+                // Let's just try to resume if we are mounted.
+                this.playVideo();
+            }
+        }
+    }
+
+    // === EVENTS ===
+
     resumeVideo = () => {
-        if (this.video) this.video.play().catch(() => { });
+        this.playVideo();
     }
 
     updateScroll(scrollY) {

@@ -120,8 +120,10 @@ export class GrassScene {
         this.initSystems();
         this.initGrass();
 
+        this.initGrass();
+
         this.updateGroundToViewport();
-        this.applyGrassPositions();
+        this.layoutGrass();
 
         this.updatePerformanceConfig(window.innerWidth, window.innerHeight);
     }
@@ -317,6 +319,7 @@ export class GrassScene {
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
         this.updateGroundToViewport();
+        this.layoutGrass();
         this.updatePerformanceConfig(width, height);
     }
 
@@ -339,7 +342,9 @@ export class GrassScene {
         // Wrap value to [0,1] for looping
         this.scrollOffsetNormZ = this.scrollOffsetNormZ % 1;
 
-        this.applyGrassPositions();
+        // OPTIMIZATION: Removed this.applyGrassPositions()
+        // We do NOT update 15k matrices on CPU per frame. 
+        // The shader uses scrollOffsetNorm and scrollOffsetZ to do it cheaply.
 
         const planeSize = Config.Grass.planeSize;
         const extentZ = planeSize * this.ground.scale.z;
@@ -351,7 +356,7 @@ export class GrassScene {
 
 
 
-    applyGrassPositions() {
+    layoutGrass() {
         const planeSize = Config.Grass.planeSize;
         const extentX = planeSize * this.ground.scale.x;
         const extentZ = planeSize * this.ground.scale.z;
@@ -361,11 +366,10 @@ export class GrassScene {
         for (let i = 0; i < grassCount; i++) {
             const base = this.grassBasePositions[i];
             const x = base.x * extentX;
+            // Static Z position relative to the plane center
+            // Shader handles the "scroll" offset
+            const z = base.z * extentZ;
 
-            let zNorm = base.z - this.scrollOffsetNormZ;
-            zNorm = ((((zNorm + 0.5) % 1) + 1) % 1) - 0.5;
-
-            const z = zNorm * extentZ;
             this.dummy.position.set(x, 0, z);
             this.dummy.rotation.y = base.rot;
             this.dummy.updateMatrix();
