@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { PerformanceMonitor } from '../utils/PerformanceMonitor.js';
 import { WindField } from '../components/WindField.js';
+import { Config } from '../Config.js';
 
 // === SHADERS ===
 
@@ -85,40 +86,6 @@ const grassFragmentShader = `
   }
 `;
 
-// === CONFIGURATION ===
-
-const planeSize = 30;
-const MAX_GRASS_COUNT = 25000;
-const grassCount = MAX_GRASS_COUNT;
-const bladeWidth = 0.4;
-const bladeHeight = 1.2;
-const bladeSegments = 1;
-const taperFactor = 0.0;
-
-const initialUniforms = {
-    turbulenceAmplitude: 0.4,
-    turbulenceFrequency: 0.2,
-    damping: 0.3,
-    windStrength: 1.2,
-    trailDecay: 0.98,
-    diffusion: 0.25,
-    advection: 1.0,
-    injectionRadius: 0.02,
-    injectionStrength: 1.0,
-    injectionStrengthMax: 1.0,
-    fieldResolution: 32,
-    glowThreshold: 0.05,
-    glowBoost: 0.2,
-};
-
-const cameraConfig = {
-    fov: 75,
-    near: 0.1,
-    far: 1000,
-    position: [0, 20, 0],
-    lookAt: [0, 0, 0],
-};
-
 // === SCENE CLASS ===
 
 export class GrassScene {
@@ -132,9 +99,14 @@ export class GrassScene {
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
         this.isHovering = false;
-        this.lastGroundPoint = null;
+        this.lastGroundPoint = null; // Will hold a Vector3
         this.scrollOffsetNormZ = 0;
         this.grassBasePositions = [];
+
+        // Pre-allocated temporaries for GC optimization
+        this.tempVec2 = new THREE.Vector2();
+        this.tempVec3 = new THREE.Vector3();
+        this.lastGroundPointVec = new THREE.Vector3();
 
         // Performance State
         this.perfMonitor = new PerformanceMonitor(this.onPerformanceDrop.bind(this));
@@ -173,8 +145,6 @@ export class GrassScene {
         window.addEventListener('touchstart', this.onTouchMove, { capture: true });
         window.addEventListener('touchmove', this.onTouchMove, { capture: true });
         window.addEventListener('pointerout', this.onPointerOut);
-
-        this.cacheBendElements();
     }
 
     unmount() {
@@ -184,62 +154,68 @@ export class GrassScene {
         window.removeEventListener('touchmove', this.onTouchMove, { capture: true });
     }
 
-    // === INITIALIZATION ===
-
     initCamera() {
+        const cfg = Config.Grass.camera;
         this.camera = new THREE.PerspectiveCamera(
-            cameraConfig.fov,
+            cfg.fov,
             window.innerWidth / window.innerHeight,
-            cameraConfig.near,
-            cameraConfig.far
+            cfg.near,
+            cfg.far
         );
-        this.camera.position.set(...cameraConfig.position);
-        this.camera.lookAt(...cameraConfig.lookAt);
+        this.camera.position.set(...cfg.position);
+        this.camera.lookAt(...cfg.lookAt);
         this.camera.up.set(0, 0, -1);
     }
 
     initSystems() {
         console.log('[Grass] initSystems()');
+        const planeSize = Config.Grass.planeSize;
         const groundGeometry = new THREE.PlaneGeometry(planeSize, planeSize);
         groundGeometry.rotateX(-Math.PI / 2);
-        // ... (rest)
+
         const groundMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
         this.ground = new THREE.Mesh(groundGeometry, groundMaterial);
         this.scene.add(this.ground);
 
         this.initialAspect = window.innerWidth / window.innerHeight;
 
+        const u = Config.Grass.uniforms;
         this.uniforms = {
             time: { value: 0.0 },
-            turbulenceAmplitude: { value: initialUniforms.turbulenceAmplitude },
-            turbulenceFrequency: { value: initialUniforms.turbulenceFrequency },
-            damping: { value: initialUniforms.damping },
-            windStrength: { value: initialUniforms.windStrength },
+            turbulenceAmplitude: { value: u.turbulenceAmplitude },
+            turbulenceFrequency: { value: u.turbulenceFrequency },
+            damping: { value: u.damping },
+            windStrength: { value: u.windStrength },
             planeExtent: { value: new THREE.Vector2(planeSize, planeSize) },
             scrollOffsetZ: { value: 0.0 },
             scrollOffsetNorm: { value: 0.0 },
             windTex: { value: null },
-            glowThreshold: { value: initialUniforms.glowThreshold },
-            glowBoost: { value: initialUniforms.glowBoost },
+            glowThreshold: { value: u.glowThreshold },
+            glowBoost: { value: u.glowBoost },
         };
 
-        this.windField = new WindField(this.renderer, initialUniforms.fieldResolution, {
-            decay: initialUniforms.trailDecay,
-            diffusion: initialUniforms.diffusion,
-            advection: initialUniforms.advection,
-            injectionRadius: initialUniforms.injectionRadius,
-            injectionStrength: initialUniforms.injectionStrength,
-            injectionStrengthMax: initialUniforms.injectionStrengthMax,
+        this.windField = new WindField(this.renderer, u.fieldResolution, {
+            decay: u.trailDecay,
+            diffusion: u.diffusion,
+            advection: u.advection,
+            injectionRadius: u.injectionRadius,
+            injectionStrength: u.injectionStrength,
+            injectionStrengthMax: u.injectionStrengthMax,
         });
         this.uniforms.windTex.value = this.windField.texture;
     }
 
     initGrass() {
         console.log('[Grass] initGrass() started');
+        const bladeWidth = Config.Grass.bladeWidth;
+        const bladeHeight = Config.Grass.bladeHeight;
+        const bladeSegments = Config.Grass.bladeSegments;
+        const taperFactor = Config.Grass.taperFactor;
+        const grassCount = Config.Grass.maxGrassCount;
+
         const grassGeometry = new THREE.PlaneGeometry(bladeWidth, bladeHeight, 1, bladeSegments);
 
         const verts = grassGeometry.attributes.position.array;
-        // ...
         for (let i = 0; i < verts.length; i += 3) {
             if (verts[i + 1] > bladeHeight / 2 - 0.001) {
                 verts[i] *= taperFactor;
@@ -274,13 +250,13 @@ export class GrassScene {
         this.dummy = new THREE.Object3D();
     }
 
-    // === PERFORMANCE & UPDATES ===
-
     updatePerformanceConfig(width, height) {
         const aspect = width / height;
+        const max = Config.Grass.maxGrassCount;
 
-        const rawCount = Math.floor(aspect * 15000);
-        const targetCount = Math.min(MAX_GRASS_COUNT, rawCount);
+        // Dynamic reduce based on aspect
+        const rawCount = Math.floor(aspect * max);
+        const targetCount = Math.min(max, rawCount);
 
         if (this.grass) {
             this.grass.count = targetCount;
@@ -312,8 +288,6 @@ export class GrassScene {
         this.camera.aspect = width / height;
         this.camera.updateProjectionMatrix();
         this.updateGroundToViewport();
-
-        this.cacheBendElements();
         this.updatePerformanceConfig(width, height);
     }
 
@@ -324,55 +298,31 @@ export class GrassScene {
     }
 
     updateScrollState(currentY) {
-        const SCROLL_NORM_PER_PIXEL = 0.0005;
-        this.scrollOffsetNormZ = currentY * SCROLL_NORM_PER_PIXEL;
+        const SCROLL_NORM_PER_PIXEL = Config.Grass.scrollNormPerPixel;
 
+        const isMobile = window.innerWidth < 768;
+        const aspect = isMobile ? this.initialAspect : this.camera.aspect;
+
+        // Formula: pixels * 0.0005 * 30 * aspect
+        // CLAMP effective aspect ratio to avoid ultra-fast scrolling on ultrawide monitors
+        const effectiveAspect = Math.min(aspect, 1.5);
+        this.scrollOffsetNormZ = (currentY * SCROLL_NORM_PER_PIXEL) * effectiveAspect;
+
+        const planeSize = Config.Grass.planeSize;
         const extentZ = planeSize * this.ground.scale.z;
+
         this.uniforms.scrollOffsetZ.value = this.scrollOffsetNormZ * extentZ;
         this.uniforms.scrollOffsetNorm.value = this.scrollOffsetNormZ;
         this.uniforms.planeExtent.value.set(planeSize * this.ground.scale.x, extentZ);
-
-        this.updateBendElements(currentY);
     }
 
-    cacheBendElements() {
-        this.bendCache = [];
-        const els = document.querySelectorAll('[data-bend-on-scroll]');
-        const scrollTop = window.scrollY || document.documentElement.scrollTop;
 
-        els.forEach(el => {
-            const rect = el.getBoundingClientRect();
-            const maxDeg = isNaN(parseFloat(el.dataset.bendMax)) ? -8 : parseFloat(el.dataset.bendMax);
-            this.bendCache.push({
-                el: el,
-                top: rect.top + scrollTop,
-                height: rect.height,
-                maxDeg: maxDeg
-            });
-        });
-    }
-
-    updateBendElements(currentY) {
-        if (!this.bendCache) return;
-
-        const centerY = window.innerHeight / 2;
-
-        for (let i = 0; i < this.bendCache.length; i++) {
-            const item = this.bendCache[i];
-            const rectTop = item.top - currentY;
-            const elCenter = rectTop + item.height / 2;
-
-            const t = (elCenter - centerY) / centerY;
-            const onlyBottom = Math.max(0, Math.min(1, t));
-            const angle = -onlyBottom * item.maxDeg;
-
-            item.el.style.transform = `perspective(1000px) rotateX(${angle}deg)`;
-        }
-    }
 
     applyGrassPositions() {
+        const planeSize = Config.Grass.planeSize;
         const extentX = planeSize * this.ground.scale.x;
         const extentZ = planeSize * this.ground.scale.z;
+        const grassCount = Config.Grass.maxGrassCount;
 
         for (let i = 0; i < grassCount; i++) {
             const base = this.grassBasePositions[i];
@@ -395,7 +345,9 @@ export class GrassScene {
         this.perfMonitor.update(dt);
 
         let mouseUv = null;
-        const dir = new THREE.Vector2(0, 0);
+        // Reuse temp vector for direction
+        this.tempVec2.set(0, 0);
+        const dir = this.tempVec2;
 
         if (this.isHovering) {
             this.raycaster.setFromCamera(this.mouse, this.camera);
@@ -403,17 +355,22 @@ export class GrassScene {
 
             if (hit.length > 0) {
                 const p = hit[0].point;
+                const planeSize = Config.Grass.planeSize;
                 const extentX = planeSize * this.ground.scale.x;
                 const extentZ = planeSize * this.ground.scale.z;
 
                 const u = Math.min(Math.max(p.x / extentX + 0.5, 0), 1);
                 const v = Math.min(Math.max(p.z / extentZ + 0.5, 0), 1);
-                mouseUv = new THREE.Vector2(u, v);
+
+                // Still creating one tiny object for API requirement, or we could change WindField API
+                // But let's at least avoid the direction creation
+                mouseUv = { x: u, y: v }; // Using raw object is cheaper than THREE.Vector2
 
                 if (this.lastGroundPoint) {
                     dir.set(p.x - this.lastGroundPoint.x, p.z - this.lastGroundPoint.z);
                 } else {
-                    this.lastGroundPoint = new THREE.Vector3();
+                    // Reuse stored vector
+                    this.lastGroundPoint = this.lastGroundPointVec;
                 }
                 this.lastGroundPoint.copy(p);
             } else {

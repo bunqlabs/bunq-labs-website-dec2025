@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import Stats from 'three/addons/libs/stats.module.js';
 import { MountainScene } from './scenes/MountainScene.js';
 import { GrassScene } from './scenes/GrassScene.js';
+import { ScrollBender } from './components/ScrollBender.js';
 import gsap from 'https://unpkg.com/gsap@3.12.5/index.js?module';
 
 // === CONFIGURATION & STATE ===
@@ -43,6 +44,7 @@ container.appendChild(renderer.domElement);
 
 const mountainScene = new MountainScene(renderer);
 const grassScene = new GrassScene(renderer);
+const scrollBender = new ScrollBender();
 
 
 renderer.setSize(container.clientWidth, container.clientHeight);
@@ -142,6 +144,7 @@ window.addEventListener('resize', () => {
         renderer.setSize(w, h);
         mountainScene.resize(w, h);
         grassScene.resize(w, h);
+        scrollBender.resize();
 
         // update cache
         calcMountainConfig();
@@ -223,14 +226,15 @@ if (barba) {
                 }
             },
             after(data) {
-                // Ensure layout is recalculated after transition is COMPLETE
                 // (e.g. after previous container is removed and new one shifts up)
                 isTransitioning = false;
                 calcMountainConfig();
+                scrollBender.resize(); // Re-cache elements after new content loaded
             }
         }]
     });
 }
+
 
 // === BOOTSTRAP ===
 
@@ -307,6 +311,9 @@ function animate() {
         grassScene.update(time, dt);
         grassScene.render();
     }
+
+    // Update scroll bending effect independently of scenes
+    scrollBender.update(currentScrollY);
 
     stats.end();
 }

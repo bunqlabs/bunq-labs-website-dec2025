@@ -25,17 +25,33 @@
         <!-- Mountain scene will be scissor-rendered here -->
       </div>
 
-      <div class="section-2" style="height: 100vh; position: relative; z-index: 10;">
-        <!-- Content over grass -->
-        <h1 style="color: white; text-align: center; padding-top: 20px;">Grass Section</h1>
+      <div class="content-section">
+        <h1 style="color: white; margin-bottom: 50px;">Bending Cards Demo</h1>
+        <div class="card-grid">
+          <div class="card" data-bend-on-scroll data-bend-max="9">
+            <h2>Project Alpha</h2>
+            <p>Bends 15 degrees on scroll.</p>
+          </div>
+          <div class="card" data-bend-on-scroll data-bend-max="9">
+            <h2>Project Beta</h2>
+            <p>Extreme 25 degree bend.</p>
+          </div>
+          <div class="card" data-bend-on-scroll data-bend-max="9">
+            <h2>Project Gamma</h2>
+            <p>Subtle 10 degree bend.</p>
+          </div>
+          <div class="card" data-bend-on-scroll data-bend-max="9">
+            <h2>Reverse Bend</h2>
+            <p>Bends backwards (-15deg).</p>
+          </div>
+        </div>
       </div>
-      <div class="section-2" style="height: 100vh; position: relative; z-index: 10;">
-        <!-- Content over grass -->
-        <h1 style="color: white; text-align: center; padding-top: 20px;">Grass Section</h1>
-      </div>
-      <div class="section-2" style="height: 100vh; position: relative; z-index: 10;">
-        <!-- Content over grass -->
-        <h1 style="color: white; text-align: center; padding-top: 20px;">Grass Section</h1>
+
+      <div class="content-section">
+        <div class="card" style="width: 80%; height: 400px;" data-bend-on-scroll data-bend-max="15">
+          <h2>Large Hero Card</h2>
+          <p>A single large element demonstration.</p>
+        </div>
       </div>
     </div>
   </main>

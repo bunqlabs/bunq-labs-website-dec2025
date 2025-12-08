@@ -2,6 +2,7 @@ body {
   margin: 0;
   overflow: auto;
   background-color: black;
+  font-family: 'Inter', sans-serif;
 }
 
 #main-wrapper {
@@ -44,16 +45,70 @@ body {
   background: radial-gradient(ellipse at center top, white 0%, black 350%);
 }
 
-.section-2 {
+.section-2,
+.content-section {
   position: relative;
   width: 100vw;
-  height: 100lvh;
+  min-height: 100vh;
   z-index: 10;
   pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Ensure content is above canvas */
 main {
   position: relative;
   z-index: 10;
+}
+
+/* HARDWARE ACCELERATION FOR SCROLL ELEMENTS */
+[data-bend-on-scroll] {
+  will-change: transform;
+  backface-visibility: hidden;
+  transform-style: preserve-3d;
+  /* Key for 3D rotation */
+}
+
+/* SAMPLE CARD STYLES */
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 40px;
+  width: 80%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 100px 0;
+  pointer-events: auto;
+  /* Enable interaction on cards */
+}
+
+.card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 40px;
+  height: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  transition: transform 0.1s linear;
+  /* Smooth update if needed, but JS handles it */
+}
+
+.card h2 {
+  margin: 0 0 10px 0;
+  font-size: 2rem;
+}
+
+.card p {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
 }

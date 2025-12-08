@@ -1,0 +1,43 @@
+export const Config = {
+    Mountain: {
+        snowCount: 1000,
+        snowArea: { x: 0.5, y: 0.5, z: 0.5 },
+        screenWidth: 0.192,
+        screenHeight: 0.108,
+        screenLightIntensity: 1000,
+        // Reduced sample size for performance
+        videoSampleResolution: { w: 4, h: 4 },
+        lightUpdateSkipThreshold: 0.022 // Skip if frame time > 22ms
+    },
+    Grass: {
+        planeSize: 30,
+        scrollNormPerPixel: 0.0005,
+        maxGrassCount: 15000, // Optimized from 25000
+        bladeWidth: 0.4,
+        bladeHeight: 1.2,
+        bladeSegments: 1,
+        taperFactor: 0.0,
+        camera: {
+            fov: 75,
+            near: 0.1,
+            far: 1000,
+            position: [0, 20, 0],
+            lookAt: [0, 0, 0]
+        },
+        uniforms: {
+            turbulenceAmplitude: 0.4,
+            turbulenceFrequency: 0.2,
+            damping: 0.3,
+            windStrength: 1.2,
+            trailDecay: 0.98,
+            diffusion: 0.25,
+            advection: 1.0,
+            injectionRadius: 0.02,
+            injectionStrength: 1.0,
+            injectionStrengthMax: 1.0,
+            fieldResolution: 32,
+            glowThreshold: 0.05,
+            glowBoost: 0.2
+        }
+    }
+};

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { PerformanceMonitor } from '../utils/PerformanceMonitor.js';
+import { Config } from '../Config.js';
 
 export class MountainScene {
 
@@ -10,14 +11,18 @@ export class MountainScene {
         console.log('[Mountain] Constructor called');
         this.renderer = renderer;
         this.scene = new THREE.Scene();
-        // ... (rest of constructor)
-        this.snowCount = 1000;
-        this.snowArea = { x: 0.5, y: 0.5, z: 0.5 };
+
+        this.snowCount = Config.Mountain.snowCount;
+        this.snowArea = Config.Mountain.snowArea;
         this.lightUpdateFrame = 0;
 
         this.mixer = null;
         this.snowSystem = null;
         this.video = null;
+
+        // Persistent color object (GC Fix)
+        this.tempColor = new THREE.Color();
+        this.pixelBuffer = new Uint8Array(4); // For reading 1 pixel from RT
 
         // Performance State
         this.perfMonitor = new PerformanceMonitor(this.onPerformanceDrop.bind(this));
@@ -42,7 +47,6 @@ export class MountainScene {
     dispose() {
         console.log('[Mountain] dispose() called');
         window.removeEventListener('click', this.resumeVideo);
-        // ...
         window.removeEventListener('touchstart', this.resumeVideo);
 
         if (this.video) {
@@ -54,6 +58,12 @@ export class MountainScene {
         if (this.screenMesh) {
             this.screenMesh.geometry.dispose();
             this.screenMesh.material.dispose();
+        }
+
+        if (this.lightRT) this.lightRT.dispose();
+        if (this.lightScene) {
+            this.lightMesh.geometry.dispose();
+            this.lightMaterial.dispose();
         }
 
         if (this.scene.background) this.scene.background.dispose();
@@ -103,9 +113,9 @@ export class MountainScene {
     }
 
     initScreen() {
-        const screenWidth = 0.192;
-        const screenHeight = 0.108;
-        const screenLightIntensity = 1000;
+        const screenWidth = Config.Mountain.screenWidth;
+        const screenHeight = Config.Mountain.screenHeight;
+        const screenLightIntensity = Config.Mountain.screenLightIntensity;
 
         this.screenMesh = new THREE.Mesh(
             new THREE.PlaneGeometry(screenWidth, screenHeight),
@@ -114,10 +124,7 @@ export class MountainScene {
         this.scene.add(this.screenMesh);
 
         this.video = document.createElement('video');
-
-        // UPDATED PATH for assets
         this.video.src = './assets/video/showreel.mp4';
-
         this.video.muted = true;
         this.video.loop = true;
         this.video.playsInline = true;
@@ -127,7 +134,6 @@ export class MountainScene {
         this.videoTexture = new THREE.VideoTexture(this.video);
         this.videoTexture.colorSpace = THREE.SRGBColorSpace;
         this.videoTexture.minFilter = THREE.LinearFilter;
-        this.videoTexture.magFilter = THREE.LinearFilter;
         this.videoTexture.generateMipmaps = false;
 
         this.screenMesh.material = new THREE.MeshBasicMaterial({
@@ -144,27 +150,34 @@ export class MountainScene {
         this.screenLight.rotation.y = Math.PI;
         this.screenMesh.add(this.screenLight);
 
-        this.sampleCanvas = document.createElement('canvas');
-        // OPTIMIZATION: Reduce sample size to minimum (4x4) to speed up drawImage/getImageData
-        this.sampleW = 4;
-        this.sampleH = 4;
-        this.sampleCanvas.width = this.sampleW;
-        this.sampleCanvas.height = this.sampleH;
-        this.sampleCtx = this.sampleCanvas.getContext('2d', { willReadFrequently: true });
-        this.sampleCtx.imageSmoothingEnabled = true;
+        // WEBGL LIGHT SAMPLING SETUP (Replaces Canvas2D)
+        // We render the video to a tiny 1x1 render target to average the colors via cheap mipmapping (linear filter)
+        this.lightRT = new THREE.WebGLRenderTarget(1, 1, {
+            type: THREE.UnsignedByteType,
+            format: THREE.RGBAFormat,
+            minFilter: THREE.LinearFilter,
+            magFilter: THREE.LinearFilter
+        });
+
+        this.lightScene = new THREE.Scene();
+        this.lightCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+        this.lightMaterial = new THREE.MeshBasicMaterial({ map: this.videoTexture });
+        this.lightMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.lightMaterial);
+        this.lightScene.add(this.lightMesh);
     }
+
+    // === SCENE SETUP & UTILS ===
 
     initLoader() {
         const loader = new GLTFLoader();
         const texLoader = new THREE.TextureLoader();
 
-        // UPDATED PATH for assets
         const mountainTex = texLoader.load('./assets/textures/mountain_texture.webp', () => { });
 
         mountainTex.colorSpace = THREE.LinearSRGBColorSpace;
         mountainTex.flipY = false;
 
-        // UPDATED PATH for assets
         loader.load(
             './assets/models/mountain_export.glb',
             (gltf) => {
@@ -219,13 +232,9 @@ export class MountainScene {
         this.snowGeo = snowGeo;
     }
 
-    // === PERFORMANCE & UPDATES ===
-
     updatePerformanceConfig(width, height) {
         const aspect = width / height;
-
         const baseDPR = Math.max(0.6, Math.min(aspect, 1.0));
-
         this.applyDPR(baseDPR * this.currentScaleDPR);
     }
 
@@ -238,12 +247,10 @@ export class MountainScene {
 
     onPerformanceDrop(fps) {
         this.currentScaleDPR *= 0.8;
-
         const width = window.innerWidth;
         const height = window.innerHeight;
         const aspect = width / height;
         const baseDPR = Math.max(0.6, Math.min(aspect, 1.0));
-
         this.applyDPR(baseDPR * this.currentScaleDPR);
     }
 
@@ -256,32 +263,36 @@ export class MountainScene {
     updateLightFromVideo(dt) {
         if (!this.video || this.video.readyState < 2) return;
 
-        // OPTIMIZATION: Skip expensive light update if frame rate is already dropping (below ~45fps)
-        if (dt > 0.022) return;
+        // Skip if laggy
+        if (dt > Config.Mountain.lightUpdateSkipThreshold) return;
 
         this.lightUpdateFrame++;
         if (this.lightUpdateFrame % 10 !== 0) return;
 
-        this.sampleCtx.clearRect(0, 0, this.sampleW, this.sampleH);
-        this.sampleCtx.drawImage(this.video, 0, 0, this.sampleW, this.sampleH);
-        const data = this.sampleCtx.getImageData(0, 0, this.sampleW, this.sampleH).data;
+        // 1. Save current state
+        const prevRT = this.renderer.getRenderTarget();
+        const prevXR = this.renderer.xr.enabled;
+        this.renderer.xr.enabled = false; // Disable XR for safe separate render
 
-        let r = 0, g = 0, b = 0;
-        const count = this.sampleW * this.sampleH;
+        // 2. Render video to 1x1 RT
+        this.renderer.setRenderTarget(this.lightRT);
+        this.renderer.render(this.lightScene, this.lightCamera);
 
-        for (let i = 0; i < data.length; i += 4) {
-            r += data[i];
-            g += data[i + 1];
-            b += data[i + 2];
-        }
+        // 3. Read the single pixel
+        this.renderer.readRenderTargetPixels(this.lightRT, 0, 0, 1, 1, this.pixelBuffer);
 
-        r = r / (255 * count);
-        g = g / (255 * count);
-        b = b / (255 * count);
+        // 4. Restore state
+        this.renderer.setRenderTarget(prevRT);
+        this.renderer.xr.enabled = prevXR;
 
-        const c = new THREE.Color(r, g, b);
-        c.convertSRGBToLinear();
-        this.screenLight.color.copy(c);
+        // Calculate color (normalized)
+        const r = this.pixelBuffer[0] / 255;
+        const g = this.pixelBuffer[1] / 255;
+        const b = this.pixelBuffer[2] / 255;
+
+        this.tempColor.setRGB(r, g, b);
+        this.tempColor.convertSRGBToLinear();
+        this.screenLight.color.copy(this.tempColor);
     }
 
     updateSnow(time, dt) {
