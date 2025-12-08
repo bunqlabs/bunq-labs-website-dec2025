@@ -11,11 +11,13 @@ export const Config = {
     },
     Grass: {
         planeSize: 30,
-        planeSize: 30,
+
         scrollNormPerPixel: 0.0005,
         maxGrassCount: 15000,
+        maxGrassCount: 15000,
         mobileMaxGrassCount: 5000,
-        mobileDPR: 0.5, // Force lower resolution on mobile
+        mobileDPR: 0.75, // Force lower resolution on mobile
+        minDPR: 0.7, // Absolute minimum DPR
         bladeWidth: 0.4,
         bladeHeight: 1.2,
         bladeSegments: 1,

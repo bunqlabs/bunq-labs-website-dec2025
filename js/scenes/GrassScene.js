@@ -194,9 +194,13 @@ export class GrassScene {
             glowBoost: { value: u.glowBoost },
         };
 
-        this.windField = new WindField(this.renderer, u.fieldResolution, {
-            decay: u.trailDecay,
-            diffusion: u.diffusion,
+        const isMobile = window.innerWidth < 768;
+        // Use lower resolution for fluid sim on mobile
+        const simRes = isMobile ? 128 : 256;
+
+        this.windField = new WindField(this.renderer, simRes, {
+            decay: Config.Grass.uniforms.decay,
+            diffusion: Config.Grass.uniforms.diffusion,
             advection: u.advection,
             injectionRadius: u.injectionRadius,
             injectionStrength: u.injectionStrength,
@@ -211,7 +215,12 @@ export class GrassScene {
         const bladeHeight = Config.Grass.bladeHeight;
         const bladeSegments = Config.Grass.bladeSegments;
         const taperFactor = Config.Grass.taperFactor;
-        const grassCount = Config.Grass.maxGrassCount;
+
+        const isMobile = window.innerWidth < 768;
+        const max = isMobile ? Config.Grass.mobileMaxGrassCount : Config.Grass.maxGrassCount;
+        const grassCount = max;
+
+        console.log(`[Grass Init] WindowWidth: ${window.innerWidth}, isMobile: ${isMobile}, ConfigMax: ${Config.Grass.mobileMaxGrassCount}, AppliedCount: ${grassCount}`);
 
         const grassGeometry = new THREE.PlaneGeometry(bladeWidth, bladeHeight, 1, bladeSegments);
 
@@ -255,6 +264,8 @@ export class GrassScene {
         const isMobile = width < 768;
         const max = isMobile ? Config.Grass.mobileMaxGrassCount : Config.Grass.maxGrassCount;
 
+        console.log(`[Grasss Debug] Width: ${width}, isMobile: ${isMobile}, Max: ${max}, MobileMaxConfig: ${Config.Grass.mobileMaxGrassCount}`);
+
         // Dynamic reduce based on aspect
         const rawCount = Math.floor(aspect * max);
         const targetCount = Math.min(max, rawCount);
@@ -268,9 +279,20 @@ export class GrassScene {
             maxDPR = Config.Grass.mobileDPR;
         }
 
-        // Base DPR logic
-        const baseDPR = Math.max(0.5, Math.min(aspect, maxDPR));
-        this.applyDPR(baseDPR * this.currentScaleDPR);
+        // Standardized Base DPR logic: Clamp to [minDPR, maxDPR]
+        const minDPR = Config.Grass.minDPR || 0.5;
+        const baseDPR = Math.max(minDPR, Math.min(aspect, maxDPR));
+        let finalDPR = baseDPR * this.currentScaleDPR;
+
+        // Enforce absolute minimum even after performance scaling
+        finalDPR = Math.max(minDPR, finalDPR);
+
+        // Log only if changed significantly to avoid spam, or one-off
+        if (Math.abs(this.renderer.getPixelRatio() - finalDPR) > 0.05) {
+            console.log(`[Grass] Applying DPR. Mobile: ${isMobile}, ConfigMax: ${Config.Grass.mobileDPR}, Calculated: ${finalDPR.toFixed(2)}`);
+        }
+
+        this.applyDPR(finalDPR);
     }
 
     applyDPR(targetDPR) {
@@ -329,7 +351,8 @@ export class GrassScene {
         const planeSize = Config.Grass.planeSize;
         const extentX = planeSize * this.ground.scale.x;
         const extentZ = planeSize * this.ground.scale.z;
-        const grassCount = Config.Grass.maxGrassCount;
+        // Use the actual count of instances we created/are using
+        const grassCount = this.grass.count;
 
         for (let i = 0; i < grassCount; i++) {
             const base = this.grassBasePositions[i];

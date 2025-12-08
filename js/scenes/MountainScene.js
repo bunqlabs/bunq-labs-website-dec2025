@@ -260,12 +260,23 @@ export class MountainScene {
         const isMobile = width < 768;
 
         let maxDPR = 1.0;
-        if (isMobile && Config.Grass.mobileDPR) {
+        if (isMobile) {
             maxDPR = Config.Grass.mobileDPR;
         }
 
-        const baseDPR = Math.max(0.6, Math.min(aspect, maxDPR));
-        this.applyDPR(baseDPR * this.currentScaleDPR);
+        // Standardized Base DPR logic
+        const minDPR = Config.Grass.minDPR || 0.5;
+        const baseDPR = Math.max(minDPR, Math.min(aspect, maxDPR));
+        let finalDPR = baseDPR * this.currentScaleDPR;
+
+        // Enforce absolute minimum even after performance scaling
+        finalDPR = Math.max(minDPR, finalDPR);
+
+        if (Math.abs(this.renderer.getPixelRatio() - finalDPR) > 0.05) {
+            console.log(`[Mountain] Applying DPR. Mobile: ${isMobile}, ConfigMax: ${Config.Grass.mobileDPR}, Calculated: ${finalDPR.toFixed(2)}`);
+        }
+
+        this.applyDPR(finalDPR);
     }
 
     applyDPR(targetDPR) {
