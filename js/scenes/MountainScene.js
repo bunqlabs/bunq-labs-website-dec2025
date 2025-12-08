@@ -234,7 +234,7 @@ export class MountainScene {
 
     updatePerformanceConfig(width, height) {
         const aspect = width / height;
-        const baseDPR = Math.max(0.6, Math.min(aspect, 1.0));
+        const baseDPR = Math.max(0.5, Math.min(aspect, 1.0));
         this.applyDPR(baseDPR * this.currentScaleDPR);
     }
 
