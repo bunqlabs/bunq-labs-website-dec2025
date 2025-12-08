@@ -118,6 +118,43 @@ main {
     backdrop-filter: none;
     -webkit-backdrop-filter: none;
     background: rgba(40, 40, 40, 0.85);
-    /* Solid backup */
   }
+}
+
+/* GLOBAL LOADER */
+.global-loader {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100lvh;
+  background-color: black;
+  z-index: 9999;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  opacity: 1;
+  /* Default to visible */
+  pointer-events: auto;
+  /* Default to blocking */
+  transition: opacity 0.1s ease;
+}
+
+.global-loader.active {
+  opacity: 1;
+  pointer-events: auto;
+  /* Block clicks when visible */
+}
+
+.global-loader.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.global-loader h2 {
+  color: white;
+  font-family: 'Inter', sans-serif;
+  font-size: 1.5rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }

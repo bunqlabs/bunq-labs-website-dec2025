@@ -185,14 +185,12 @@ if (barba) {
                     transitionGlobalFade = goingToMountain || comingFromMountain;
 
                     if (transitionGlobalFade) {
-                        // Fade out both content and the WebGL canvas (scene)
-                        // Note: We fade the CONTAINER of the canvas or the canvas itself?
-                        // 'container' var is the #webgl div.
-                        return gsap.to([data.current.container, container], { opacity: 0, duration: 1 });
+                        // Activate Global Loader
+                        // pointerEvents: 'auto' blocks clicks during transition
+                        return gsap.to('.global-loader', { opacity: 1, pointerEvents: 'auto', duration: 0.5 });
                     } else {
-                        // Only fade content, leave canvas (grass) visible
-                        // Ensure we don't accidentally hide the canvas if we came from mountain
-                        return gsap.to(data.current.container, { opacity: 0, duration: 1 });
+                        // Only fade content
+                        return gsap.to(data.current.container, { opacity: 0, duration: 0.5 });
                     }
                 } catch (err) {
                     console.error(err);
@@ -220,10 +218,12 @@ if (barba) {
                     updateRouteState(ns, data.next.container);
 
                     if (transitionGlobalFade) {
-                        // Ensure opacity starts at 0 before fading in
-                        gsap.set([data.next.container, container], { opacity: 0 });
-                        // Fade in both
-                        return gsap.to([data.next.container, container], { opacity: 1, duration: 1 });
+                        // Ensure overlay is fully visible
+                        gsap.set(data.next.container, { opacity: 1 }); // Content ready
+                        gsap.set(container, { opacity: 1 }); // Canvas ready
+
+                        // Fade out loader and unblock clicks
+                        return gsap.to('.global-loader', { opacity: 0, pointerEvents: 'none', duration: 0.5 });
                     } else {
                         // Ensure opacity starts at 0 before fading in
                         // Ensure opacity starts at 0 before fading in
@@ -231,7 +231,7 @@ if (barba) {
                         // Fade in content only
                         // Also make sure canvas is visible if we hid it previously
                         gsap.set(container, { opacity: 1 });
-                        return gsap.to(data.next.container, { opacity: 1, duration: 1 });
+                        return gsap.to(data.next.container, { opacity: 1, duration: 0.5 });
                     }
                 } catch (err) {
                     console.error(err);
@@ -310,4 +310,16 @@ function animate() {
     stats.end();
 }
 
+// Start the animation loop (or ensure it runs)
 animate();
+
+// Initial Load Complete: Fade out the global loader
+const initialLoader = document.querySelector('.global-loader');
+if (initialLoader) {
+    // Wait 2 seconds to ensure first frame render and show branding
+    gsap.delayedCall(2.0, () => {
+        gsap.to(initialLoader, { opacity: 0, pointerEvents: 'none', duration: 0.5 });
+    });
+}
+
+
