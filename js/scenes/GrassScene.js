@@ -192,6 +192,7 @@ export class GrassScene {
             windTex: { value: null },
             glowThreshold: { value: u.glowThreshold },
             glowBoost: { value: u.glowBoost },
+            cameraPosition: { value: new THREE.Vector3() }
         };
 
         this.windField = new WindField(this.renderer, u.fieldResolution, {
@@ -348,47 +349,33 @@ export class GrassScene {
     }
 
     update(time, dt) {
-        this.uniforms.time.value = time;
-        this.perfMonitor.update(dt);
+        if (!this.grass) return;
 
-        let mouseUv = null;
-        // Reuse temp vector for direction
-        this.tempVec2.set(0, 0);
-        const dir = this.tempVec2;
+        const isMobileOrTablet = window.innerWidth < 1024;
 
-        if (this.isHovering) {
+        // Skip wind simulation on mobile/tablet
+        if (!isMobileOrTablet) {
+            this.windField.update(time, this.mouseUv, this.mouseDir, dt);
+
+            // Interaction Raycasting (Hover effect)
             this.raycaster.setFromCamera(this.mouse, this.camera);
-            const hit = this.raycaster.intersectObject(this.ground, false);
+            const intersects = this.raycaster.intersectObject(this.ground);
 
-            if (hit.length > 0) {
-                const p = hit[0].point;
-                const planeSize = Config.Grass.planeSize;
-                const extentX = planeSize * this.ground.scale.x;
-                const extentZ = planeSize * this.ground.scale.z;
-
-                const u = Math.min(Math.max(p.x / extentX + 0.5, 0), 1);
-                const v = Math.min(Math.max(p.z / extentZ + 0.5, 0), 1);
-
-                // Still creating one tiny object for API requirement, or we could change WindField API
-                // But let's at least avoid the direction creation
-                mouseUv = { x: u, y: v }; // Using raw object is cheaper than THREE.Vector2
-
-                if (this.lastGroundPoint) {
-                    dir.set(p.x - this.lastGroundPoint.x, p.z - this.lastGroundPoint.z);
-                } else {
-                    // Reuse stored vector
-                    this.lastGroundPoint = this.lastGroundPointVec;
-                }
-                this.lastGroundPoint.copy(p);
+            if (intersects.length > 0) {
+                const uv = intersects[0].uv;
+                this.mouseUv.copy(uv);
             } else {
-                this.lastGroundPoint = null;
+                // If not hovering ground, move influence away
+                this.mouseUv.set(-1000, -1000);
             }
-        } else {
-            this.lastGroundPoint = null;
         }
 
-        this.windField.update(mouseUv, dir, dt);
-        this.uniforms.windTex.value = this.windField.texture;
+        // Always update uniforms that might change
+        this.uniforms.time.value = time;
+        this.uniforms.windTex.value = this.windField.texture; // Still bind texture even if static
+        this.uniforms.cameraPosition.value = this.camera.position;
+
+        this.applyGrassPositions();
     }
 
     render() {
