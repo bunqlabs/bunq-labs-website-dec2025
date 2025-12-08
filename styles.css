@@ -64,6 +64,11 @@ main {
   z-index: 10;
 }
 
+/* Prevent FOUC: Hide barba container by default, JS will fade it in */
+[data-barba="container"] {
+  opacity: 0;
+}
+
 /* HARDWARE ACCELERATION FOR SCROLL ELEMENTS */
 [data-bend-on-scroll] {
   will-change: transform;
@@ -137,7 +142,6 @@ main {
   /* Default to visible */
   pointer-events: auto;
   /* Default to blocking */
-  transition: opacity 0.1s ease;
 }
 
 .global-loader.active {

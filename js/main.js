@@ -159,83 +159,102 @@ window.addEventListener('resize', () => {
 
 // === BARBA SETUP ===
 
+// === EVENTS & INTERACTION ===
+
+// Intercept clicks to prevent reloading same page
+document.addEventListener('click', (e) => {
+    const link = e.target.closest('a');
+    if (link && link.href) {
+        // Normalize URLs for comparison (strip hash if needed, but strict is fine for now)
+        if (link.href === window.location.href) {
+            console.log('[Nav] Blocked reload on same link');
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+    }
+});
+
 if (barba) {
     barba.init({
         debug: false,
+        prevent: ({ el }) => {
+            // Prevent transition if clicking same link
+            if (el && el.href && el.href === window.location.href) {
+                return true;
+            }
+        },
         transitions: [{
             name: 'fade',
             leave(data) {
-                try {
-                    // Try getting namespace, but fallback to URL analysis if module not loaded yet
-                    let nextNs = data.next.namespace;
-
-                    // Fallback to checking URL if namespace is missing (common in Barba sync mode or pre-fetch timing)
-                    if (!nextNs && data.next.url) {
-                        const path = data.next.url.path || data.next.url.href;
-                        // Assuming home is '/' or '/index.html' or ends with '/'
-                        if (path === '/' || path.endsWith('index.html') || path.endsWith('/')) {
-                            nextNs = 'home';
+                // Return a Promise to force Barba to wait
+                return new Promise(resolve => {
+                    try {
+                        let nextNs = data.next.namespace;
+                        if (!nextNs && data.next.url) {
+                            const path = data.next.url.path || data.next.url.href;
+                            if (path === '/' || path.endsWith('index.html') || path.endsWith('/')) {
+                                nextNs = 'home';
+                            }
                         }
+
+                        const goingToMountain = (nextNs === 'home');
+                        const comingFromMountain = mountainVisible; // Global state check
+
+                        transitionGlobalFade = goingToMountain || comingFromMountain;
+
+                        if (transitionGlobalFade) {
+                            // activate loader (Legacy behavior, maybe user wants this replaced too? Confirmed unified.)
+                            // Actually user said "Do this instead of tweaking anything else".
+                            // So we should UNIFY LEAVE too.
+                            gsap.to('.main-wrapper, #webgl', { opacity: 0, duration: 0.5, onComplete: resolve });
+                        } else {
+                            // fade wrapper out
+                            gsap.to('.main-wrapper, #webgl', { opacity: 0, duration: 0.5, onComplete: resolve });
+                        }
+                    } catch (err) {
+                        console.error(err);
+                        resolve();
                     }
-
-                    const goingToMountain = (nextNs === 'home');
-                    const comingFromMountain = mountainVisible;
-
-                    // Global fade if we interact with Mountain scene at all
-                    transitionGlobalFade = goingToMountain || comingFromMountain;
-
-                    if (transitionGlobalFade) {
-                        // Activate Global Loader
-                        // pointerEvents: 'auto' blocks clicks during transition
-                        return gsap.to('.global-loader', { opacity: 1, pointerEvents: 'auto', duration: 0.5 });
-                    } else {
-                        // Only fade content
-                        return gsap.to(data.current.container, { opacity: 0, duration: 0.5 });
-                    }
-                } catch (err) {
-                    console.error(err);
-                }
+                });
+            },
+            beforeEnter(data) {
+                // Ensure new container is visible immediately (since we fade wrapper)
+                // If we assume wrapper is fading, the child should be fully opaque.
+                gsap.set(data.next.container, { opacity: 1 });
             },
             enter(data) {
-                try {
-                    // FLag start of reset
-                    window.isNavigatingReset = true;
-                    isTransitioning = true; // Force render during transition
+                return new Promise(resolve => {
+                    try {
+                        // Reset Scroll
+                        window.isNavigatingReset = true;
+                        isTransitioning = true;
+                        window.scrollTo(0, 0);
+                        lastRawScrollY = 0;
+                        currentScrollY = 0;
+                        requestAnimationFrame(() => { window.isNavigatingReset = false; });
 
-                    window.scrollTo(0, 0);
+                        const ns = data.next.namespace || (data.next.container && data.next.container.dataset.namespace);
+                        updateRouteState(ns, data.next.container);
 
-                    // Immediately update our raw tracking so we accept 0 as the new baseline
-                    lastRawScrollY = 0;
-                    currentScrollY = 0;
+                        const delay = (ns === 'home') ? 2.0 : 1.0;
 
-                    // Re-enable tracking next frame/tick
-                    requestAnimationFrame(() => {
-                        window.isNavigatingReset = false;
-                    });
+                        // Unified Entrance: Fade In Wrapper AND WebGL
+                        const targets = '.main-wrapper, #webgl';
 
-                    const ns = data.next.namespace || (data.next.container && data.next.container.dataset.namespace);
+                        // Ensure they start at 0
+                        gsap.set(targets, { opacity: 0 });
 
-                    updateRouteState(ns, data.next.container);
-
-                    if (transitionGlobalFade) {
-                        // Ensure overlay is fully visible
-                        gsap.set(data.next.container, { opacity: 1 }); // Content ready
-                        gsap.set(container, { opacity: 1 }); // Canvas ready
-
-                        // Fade out loader and unblock clicks
-                        return gsap.to('.global-loader', { opacity: 0, pointerEvents: 'none', duration: 0.5 });
-                    } else {
-                        // Ensure opacity starts at 0 before fading in
-                        // Ensure opacity starts at 0 before fading in
-                        gsap.set(data.next.container, { opacity: 0 });
-                        // Fade in content only
-                        // Also make sure canvas is visible if we hid it previously
-                        gsap.set(container, { opacity: 1 });
-                        return gsap.to(data.next.container, { opacity: 1, duration: 0.5 });
+                        // Fade them in together to 1
+                        return gsap.fromTo(targets,
+                            { opacity: 0 },
+                            { opacity: 1, duration: 0.5, delay: delay, onComplete: resolve }
+                        );
+                    } catch (err) {
+                        console.error(err);
+                        resolve();
                     }
-                } catch (err) {
-                    console.error(err);
-                }
+                });
             },
             after(data) {
                 // (e.g. after previous container is removed and new one shifts up)
@@ -248,10 +267,16 @@ if (barba) {
 }
 
 
-// === BOOTSTRAP ===
+// Force initial Barba container to be visible (it's hidden by CSS to prevent FOUC)
+const initialBarbaContainer = document.querySelector('[data-barba="container"]');
+if (initialBarbaContainer) {
+    gsap.set(initialBarbaContainer, { opacity: 1 });
+}
 
-const initialNamespace = document.querySelector('[data-barba="container"]').dataset.namespace;
-updateRouteState(initialNamespace);
+// Initial Route Setup
+const initialContainer = document.querySelector('[data-barba="container"]');
+const initialNs = initialContainer.dataset.namespace;
+updateRouteState(initialNs, initialContainer);
 
 // === ANIMATION LOOP ===
 
@@ -275,11 +300,24 @@ function animate() {
 
     // Visibility Check
     mountainVisible = false;
-    if (isHome && mountainConfig.height > 0) {
-        // Simple check: is it effectively on screen? (Since it scrolls up, we just check if top < window height)
-        const elTop = mountainConfig.top - currentScrollY;
-        if (elTop + mountainConfig.height > 0 && elTop < window.innerHeight) {
+
+    if (isTransitioning) {
+        // STRICT SYNC: If we are transitioning TO Home, force Mountain visible immediately.
+        // This ensures that when the fade-in starts, the scene is already swapped.
+        if (isHome) {
             mountainVisible = true;
+        }
+    } else if (isHome) {
+        // Normal Runtime Check
+        // If config is not yet set (height 0), assume it's visible (Home default)
+        if (mountainConfig.height === 0) {
+            mountainVisible = true;
+        } else {
+            // Standard check: is it effectively on screen?
+            const elTop = mountainConfig.top - currentScrollY;
+            if (elTop + mountainConfig.height > 0 && elTop < window.innerHeight) {
+                mountainVisible = true;
+            }
         }
     }
 
