@@ -327,15 +327,24 @@ export class GrassScene {
     }
 
     updateScrollState(currentY) {
-        const SCROLL_NORM_PER_PIXEL = Config.Grass.scrollNormPerPixel;
+        // If mobile, keep static (no conveyor belt)
+        if (window.innerWidth < 768) {
+            this.scrollOffsetNormZ = 0;
+            this.applyGrassPositions();
+            return;
+        }
 
-        const isMobile = window.innerWidth < 768;
-        const aspect = isMobile ? this.initialAspect : this.camera.aspect;
-
-        // Formula: pixels * 0.0005 * 30 * aspect
-        // CLAMP effective aspect ratio to avoid ultra-fast scrolling on ultrawide monitors
+        const aspect = window.innerWidth / window.innerHeight;
+        // Clamp aspect influence for ultrawide fix (so it doesn't move too fast)
         const effectiveAspect = Math.min(aspect, 1.5);
-        this.scrollOffsetNormZ = (currentY * SCROLL_NORM_PER_PIXEL) * effectiveAspect;
+
+        // Calculate scroll offset based on Normalized units
+        this.scrollOffsetNormZ = (currentY * Config.Grass.scrollNormPerPixel) * effectiveAspect;
+
+        // Wrap value to [0,1] for looping
+        this.scrollOffsetNormZ = this.scrollOffsetNormZ % 1;
+
+        this.applyGrassPositions();
 
         const planeSize = Config.Grass.planeSize;
         const extentZ = planeSize * this.ground.scale.z;

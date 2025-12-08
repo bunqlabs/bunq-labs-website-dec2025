@@ -93,7 +93,13 @@ function updateRouteState(namespace, container) {
 
             renderer.toneMapping = THREE.ACESFilmicToneMapping;
             renderer.toneMappingExposure = 1.0;
+
+            // Force visibility immediately to prevent "Grass flash"
+            mountainVisible = true;
         }
+        // DO NOT mount grass if we are on home and mountain is covering everything
+        // But since mountain scrolls, we might need grass later.
+        // For now, let's keep grass mounted but control RENDER loop strictly.
         grassScene.mount();
     } else {
         isHome = false;
@@ -180,9 +186,12 @@ if (barba) {
 
                     if (transitionGlobalFade) {
                         // Fade out both content and the WebGL canvas (scene)
+                        // Note: We fade the CONTAINER of the canvas or the canvas itself?
+                        // 'container' var is the #webgl div.
                         return gsap.to([data.current.container, container], { opacity: 0, duration: 1 });
                     } else {
                         // Only fade content, leave canvas (grass) visible
+                        // Ensure we don't accidentally hide the canvas if we came from mountain
                         return gsap.to(data.current.container, { opacity: 0, duration: 1 });
                     }
                 } catch (err) {
@@ -217,8 +226,11 @@ if (barba) {
                         return gsap.to([data.next.container, container], { opacity: 1, duration: 1 });
                     } else {
                         // Ensure opacity starts at 0 before fading in
+                        // Ensure opacity starts at 0 before fading in
                         gsap.set(data.next.container, { opacity: 0 });
                         // Fade in content only
+                        // Also make sure canvas is visible if we hid it previously
+                        gsap.set(container, { opacity: 1 });
                         return gsap.to(data.next.container, { opacity: 1, duration: 1 });
                     }
                 } catch (err) {
@@ -268,35 +280,23 @@ function animate() {
         }
     }
 
-    // RENDER ORDER:
-    // 1. Grass (Background)
+    // RENDER ORDER & EXCLUSIVITY:
+    // "Never have dual scene rendering. Always have only one."
 
-    // Push the VIRTUAL (continuous) scroll state to grass
-    grassScene.updateScrollState(virtualScrollY);
-    grassScene.update(time, dt);
-    grassScene.render();
-
-    // 2. Mountain (Foreground / relative scroll overlay)
+    // 1. Mountain (Priority if visible)
     if (mountainVisible) {
-        // No scissor needed, it moves naturally via updateScroll()
-        // We do NOT clear depth, as we want to draw Over/With grass if transparency exists
-        // But Mountain has its own background mesh, so it will occlude grass naturally.
-
-        // However, if we want Mountain to be "atop", we should clear depth or rely on Z-buffer
-        // Since Mountain is at Z ~0.65 to 0 (camera relative), and Grass is... ?
-        // Grass camera is at 0, 20, 0 looking at 0,0,0.
-        // They are separate scenes/cameras. Z-buffer is cleared between renders unless autoClear=false.
-
-        // Default Three.js renderer.render() clears buffer if autoClear=true.
-        // We want to Overlay.
-
-        renderer.autoClear = false;
-        renderer.clearDepth(); // Clear depth so Mountain draws on top of Grass
-
+        // Render Mountain ONLY
         mountainScene.update(time, dt);
         mountainScene.render();
 
-        renderer.autoClear = true; // Restore for next frame
+        // Push virtual scroll to grass even if not rendering, so it doesn't jump when it reappears
+        grassScene.updateScrollState(virtualScrollY);
+
+    } else {
+        // 2. Grass (Fallback if Mountain not visible)
+        grassScene.updateScrollState(virtualScrollY);
+        grassScene.update(time, dt);
+        grassScene.render();
     }
 
 

@@ -228,6 +228,11 @@ export class MountainScene {
     }
 
     initSnow() {
+        if (window.innerWidth < 768) {
+            console.log('[Mountain] Snow disabled on mobile');
+            return;
+        }
+
         const snowGeo = new THREE.BufferGeometry();
         const snowPositions = new Float32Array(this.snowCount * 3);
         const snowSpeeds = new Float32Array(this.snowCount);
