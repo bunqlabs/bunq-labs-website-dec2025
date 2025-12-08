@@ -79,7 +79,7 @@ const grassFragmentShader = `
     vec3 topColor = vec3(grayValue, grayValue, grayValue);
     vec3 baseColor = mix(bottomColor, topColor + 0.1, vHeight);
 
-    vec3 glowColor = vec3(0.5, 0.5, 0.5);
+    vec3 glowColor = vec3(0.0, 0.3, 0.5);
     vec3 color = baseColor + vGlow * glowColor;
 
     gl_FragColor = vec4(color, 1.0);

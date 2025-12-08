@@ -39,7 +39,7 @@ export const Config = {
             injectionStrength: 1.0,
             injectionStrengthMax: 1.0,
             fieldResolution: 32,
-            glowThreshold: 0.05,
+            glowThreshold: 0.10,
             glowBoost: 0.3
         }
     }
