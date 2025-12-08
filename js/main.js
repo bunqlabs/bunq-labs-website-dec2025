@@ -131,9 +131,9 @@ function updateVirtualScroll() {
     currentScrollY = raw;
 }
 
-window.addEventListener('scroll', () => {
-    updateVirtualScroll();
-}, { passive: true });
+// window.addEventListener('scroll', () => {
+//    updateVirtualScroll();
+// }, { passive: true });
 
 let resizeTimeout;
 window.addEventListener('resize', () => {
@@ -261,6 +261,9 @@ function animate() {
 
     const time = performance.now() * 0.001;
     const dt = clock.getDelta();
+
+    // Poll scroll directly for lowest latency sync
+    updateVirtualScroll();
 
     // Default viewport for full screen
     // Default viewport for full screen
