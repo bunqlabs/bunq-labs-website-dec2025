@@ -252,7 +252,8 @@ export class GrassScene {
 
     updatePerformanceConfig(width, height) {
         const aspect = width / height;
-        const max = Config.Grass.maxGrassCount;
+        const isMobile = width < 768;
+        const max = isMobile ? Config.Grass.mobileMaxGrassCount : Config.Grass.maxGrassCount;
 
         // Dynamic reduce based on aspect
         const rawCount = Math.floor(aspect * max);
