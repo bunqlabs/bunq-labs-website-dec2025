@@ -120,8 +120,6 @@ export class GrassScene {
         this.initSystems();
         this.initGrass();
 
-        this.initGrass();
-
         this.updateGroundToViewport();
         this.layoutGrass();
 

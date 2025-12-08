@@ -3,6 +3,7 @@ import Stats from 'three/addons/libs/stats.module.js';
 import { MountainScene } from './scenes/MountainScene.js';
 import { GrassScene } from './scenes/GrassScene.js';
 import { ScrollBender } from './components/ScrollBender.js';
+import { AudioManager } from './components/AudioManager.js';
 import gsap from 'https://unpkg.com/gsap@3.12.5/index.js?module';
 
 // === CONFIGURATION & STATE ===
@@ -46,6 +47,7 @@ container.appendChild(renderer.domElement);
 const mountainScene = new MountainScene(renderer);
 const grassScene = new GrassScene(renderer);
 const scrollBender = new ScrollBender();
+const audioManager = new AudioManager();
 
 
 renderer.setSize(container.clientWidth, container.clientHeight);
@@ -173,6 +175,13 @@ document.addEventListener('click', (e) => {
             e.stopPropagation();
             return;
         }
+    }
+});
+
+// Audio Toggle
+document.addEventListener('click', (e) => {
+    if (e.target && e.target.id === 'audio-toggle') {
+        audioManager.toggleMute();
     }
 });
 
