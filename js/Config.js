@@ -17,7 +17,7 @@ export const Config = {
         mobileDPR: 1, // Force lower resolution on mobile
         minDPR: 1, // Absolute minimum DPR
         bladeWidth: 0.4,
-        bladeHeight: 1.2,
+        bladeHeight: 1.0,
         bladeSegments: 1,
         taperFactor: 0.1,
         camera: {
@@ -36,11 +36,11 @@ export const Config = {
             diffusion: 0.25,
             advection: 1.0,
             injectionRadius: 0.02,
-            injectionStrength: 1.0,
+            injectionStrength: 0.5,
             injectionStrengthMax: 1.0,
-            fieldResolution: 32,
+            fieldResolution: 16,
             glowThreshold: 0.05,
-            glowBoost: 0.2
+            glowBoost: 0.3
         }
     }
 };
