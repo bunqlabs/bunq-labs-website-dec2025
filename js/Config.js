@@ -16,8 +16,8 @@ export const Config = {
         maxGrassCount: 15000,
         maxGrassCount: 15000,
         mobileMaxGrassCount: 5000,
-        mobileDPR: 0.75, // Force lower resolution on mobile
-        minDPR: 0.7, // Absolute minimum DPR
+        mobileDPR: 0.8, // Force lower resolution on mobile
+        minDPR: 0.8, // Absolute minimum DPR
         bladeWidth: 0.4,
         bladeHeight: 1.2,
         bladeSegments: 1,
