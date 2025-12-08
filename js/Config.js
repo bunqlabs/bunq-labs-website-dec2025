@@ -18,8 +18,9 @@ export const Config = {
         minDPR: 1, // Absolute minimum DPR
         bladeWidth: 0.4,
         bladeHeight: 1.0,
+        maxWindOffset: 1.2, // Cap wind displacement to 1.2x height
         bladeSegments: 1,
-        taperFactor: 0.1,
+        taperFactor: 0.05,
         camera: {
             fov: 75,
             near: 0.1,
@@ -30,15 +31,14 @@ export const Config = {
         uniforms: {
             turbulenceAmplitude: 0.4,
             turbulenceFrequency: 0.2,
-            damping: 0.3,
             windStrength: 1.2,
             trailDecay: 0.98,
             diffusion: 0.25,
             advection: 1.0,
-            injectionRadius: 0.02,
-            injectionStrength: 0.5,
+            injectionRadius: 0.04,
+            injectionStrength: 1.0,
             injectionStrengthMax: 1.0,
-            fieldResolution: 16,
+            fieldResolution: 32,
             glowThreshold: 0.05,
             glowBoost: 0.3
         }

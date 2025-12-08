@@ -404,6 +404,13 @@ export class GrassScene {
 
                 if (this.lastGroundPoint) {
                     dir.set(p.x - this.lastGroundPoint.x, p.z - this.lastGroundPoint.z);
+
+                    // CLAMP VELOCITY to avoid "big grass" Glitch
+                    // Cap the displacement vector length
+                    const maxLen = Config.Grass.bladeHeight * Config.Grass.maxWindOffset;
+                    if (dir.length() > maxLen) {
+                        dir.setLength(maxLen);
+                    }
                 } else {
                     // Reuse stored vector
                     this.lastGroundPoint = this.lastGroundPointVec;
