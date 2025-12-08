@@ -263,7 +263,13 @@ export class GrassScene {
             this.grass.count = targetCount;
         }
 
-        const baseDPR = Math.max(0.6, Math.min(aspect, 1.0));
+        let maxDPR = 1.0;
+        if (isMobile) {
+            maxDPR = Config.Grass.mobileDPR;
+        }
+
+        // Base DPR logic
+        const baseDPR = Math.max(0.5, Math.min(aspect, maxDPR));
         this.applyDPR(baseDPR * this.currentScaleDPR);
     }
 
