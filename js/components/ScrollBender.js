@@ -35,6 +35,8 @@ export class ScrollBender {
 
     update(currentScrollY) {
         if (!this.cache.length) return;
+        if (window.innerWidth < 768) return; // Disable bending on mobile for performance
+
 
         const viewportHeight = window.innerHeight;
         // Zone starts at 70% down the screen (bottom 30%)
@@ -62,7 +64,12 @@ export class ScrollBender {
                 angle = ratio * item.maxDeg;
             }
 
-            item.el.style.transform = `perspective(1000px) rotateX(${angle}deg)`;
+            // Optimization: Only write to DOM if angle changed significantly
+            const lastAngle = item.lastAngle || 0;
+            if (Math.abs(angle - lastAngle) > 0.1) {
+                item.el.style.transform = `perspective(1000px) rotateX(${angle.toFixed(2)}deg)`;
+                item.lastAngle = angle;
+            }
         }
     }
 }

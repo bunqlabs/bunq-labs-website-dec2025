@@ -25,8 +25,9 @@ export class MountainScene {
         this.video = null;
 
         // Persistent color object (GC Fix)
-        this.tempColor = new THREE.Color();
-        this.pixelBuffer = new Uint8Array(4); // For reading 1 pixel from RT
+        // this.tempColor = new THREE.Color();
+        // this.pixelBuffer = new Uint8Array(4); // Removed
+
 
         // Performance State
         this.perfMonitor = new PerformanceMonitor(this.onPerformanceDrop.bind(this));
@@ -64,11 +65,11 @@ export class MountainScene {
             this.screenMesh.material.dispose();
         }
 
-        if (this.lightRT) this.lightRT.dispose();
-        if (this.lightScene) {
-            this.lightMesh.geometry.dispose();
-            this.lightMaterial.dispose();
-        }
+        // if (this.lightRT) this.lightRT.dispose();
+        // if (this.lightScene) {
+        //     this.lightMesh.geometry.dispose();
+        //     this.lightMaterial.dispose();
+        // }
 
         if (this.scene.background) this.scene.background.dispose();
     }
@@ -164,7 +165,7 @@ export class MountainScene {
         });
 
         this.screenLight = new THREE.RectAreaLight(
-            0xffffff,
+            0x808080, // Static Grey Light
             screenLightIntensity,
             screenWidth,
             screenHeight * 2
@@ -172,21 +173,8 @@ export class MountainScene {
         this.screenLight.rotation.y = Math.PI;
         this.screenMesh.add(this.screenLight);
 
-        // WEBGL LIGHT SAMPLING SETUP (Replaces Canvas2D)
-        // We render the video to a tiny 1x1 render target to average the colors via cheap mipmapping (linear filter)
-        this.lightRT = new THREE.WebGLRenderTarget(1, 1, {
-            type: THREE.UnsignedByteType,
-            format: THREE.RGBAFormat,
-            minFilter: THREE.LinearFilter,
-            magFilter: THREE.LinearFilter
-        });
-
-        this.lightScene = new THREE.Scene();
-        this.lightCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-
-        this.lightMaterial = new THREE.MeshBasicMaterial({ map: this.videoTexture });
-        this.lightMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), this.lightMaterial);
-        this.lightScene.add(this.lightMesh);
+        // WEBGL LIGHT SAMPLING REMOVED
+        // Replaced with static grey light for performance
     }
 
     // === SCENE SETUP & UTILS ===
@@ -306,40 +294,8 @@ export class MountainScene {
         this.updatePerformanceConfig(width, height);
     }
 
-    updateLightFromVideo(dt) {
-        if (!this.video || this.video.readyState < 2) return;
+    // updateLightFromVideo removed
 
-        // Skip if laggy
-        if (dt > Config.Mountain.lightUpdateSkipThreshold) return;
-
-        this.lightUpdateFrame++;
-        if (this.lightUpdateFrame % 10 !== 0) return;
-
-        // 1. Save current state
-        const prevRT = this.renderer.getRenderTarget();
-        const prevXR = this.renderer.xr.enabled;
-        this.renderer.xr.enabled = false; // Disable XR for safe separate render
-
-        // 2. Render video to 1x1 RT
-        this.renderer.setRenderTarget(this.lightRT);
-        this.renderer.render(this.lightScene, this.lightCamera);
-
-        // 3. Read the single pixel
-        this.renderer.readRenderTargetPixels(this.lightRT, 0, 0, 1, 1, this.pixelBuffer);
-
-        // 4. Restore state
-        this.renderer.setRenderTarget(prevRT);
-        this.renderer.xr.enabled = prevXR;
-
-        // Calculate color (normalized)
-        const r = this.pixelBuffer[0] / 255;
-        const g = this.pixelBuffer[1] / 255;
-        const b = this.pixelBuffer[2] / 255;
-
-        this.tempColor.setRGB(r, g, b);
-        this.tempColor.convertSRGBToLinear();
-        this.screenLight.color.copy(this.tempColor);
-    }
 
     updateSnow(time, dt) {
         if (!this.snowGeo) return;
@@ -364,7 +320,8 @@ export class MountainScene {
 
     update(time, dt) {
         this.perfMonitor.update(dt);
-        this.updateLightFromVideo(dt);
+        // this.updateLightFromVideo(dt); // Removed
+
         this.updateSnow(time, dt);
     }
 
