@@ -6,7 +6,7 @@ export class AudioManager {
         this.isPlaying = false;
         this.isMuted = false;
         this.volume = 0.5; // Target volume
-        this.trackUrl = './assets/audio/ambient_loop.mp3'; // Placeholder
+        this.trackUrl = 'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/audio/ambient_loop.mp3'; // Placeholder
 
         this.init();
     }

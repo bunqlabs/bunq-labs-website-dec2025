@@ -149,7 +149,7 @@ export class MountainScene {
         this.contentGroup.add(this.screenMesh);
 
         this.video = document.createElement('video');
-        this.video.src = './assets/video/showreel.mp4';
+        this.video.src = 'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/video/showreel.mp4';
         this.video.muted = true;
         this.video.loop = true;
         this.video.playsInline = true;
@@ -185,13 +185,13 @@ export class MountainScene {
         const loader = new GLTFLoader();
         const texLoader = new THREE.TextureLoader();
 
-        const mountainTex = texLoader.load('./assets/textures/mountain_texture.webp', () => { });
+        const mountainTex = texLoader.load('https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/textures/mountain_texture.webp', () => { });
 
         mountainTex.colorSpace = THREE.LinearSRGBColorSpace;
         mountainTex.flipY = false;
 
         loader.load(
-            './assets/models/mountain_export.glb',
+            'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/models/mountain_export.glb',
             (gltf) => {
                 const root = gltf.scene || gltf.scenes[0];
                 root.traverse((obj) => {
