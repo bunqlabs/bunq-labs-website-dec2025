@@ -110,7 +110,7 @@ export class MountainScene {
         const ctx = canvas.getContext('2d');
         const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
         grad.addColorStop(0, '#000000');
-        grad.addColorStop(1, '#555555');
+        grad.addColorStop(1, '#888888');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, canvas.width, canvas.height);
         this.bgTexture = new THREE.CanvasTexture(canvas);
