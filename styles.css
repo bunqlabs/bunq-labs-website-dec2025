@@ -174,3 +174,39 @@ main {
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
+
+/* LOGO GRID */
+.logo-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  width: 80%;
+  max-width: 1000px;
+  margin-bottom: 50px;
+  pointer-events: auto;
+}
+
+.logo-item {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  height: 120px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
+  transition: all 0.5s ease;
+}
+
+.logo-item img {
+  max-width: 80%;
+  max-height: 60%;
+  object-fit: contain;
+  filter: grayscale(100%) brightness(2); /* Normalize styling */
+  transition: opacity 0.5s ease;
+}
+
+/* Flicker/Change Animation */
+.logo-item.changing img {
+  opacity: 0;
+}
