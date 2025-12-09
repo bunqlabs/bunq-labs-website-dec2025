@@ -6,6 +6,7 @@ import { ScrollBender } from './components/ScrollBender.js';
 import { AudioManager } from './components/AudioManager.js';
 import { ClientLogoCycler } from './components/ClientLogoCycler.js';
 import { AcceleratingGlobe } from './components/AcceleratingGlobe.js';
+import { FlickCards } from './components/FlickCards.js';
 import gsap from 'https://unpkg.com/gsap@3.12.5/index.js?module';
 
 // === CONFIGURATION & STATE ===
@@ -52,6 +53,7 @@ const scrollBender = new ScrollBender();
 const audioManager = new AudioManager();
 const clientLogoCycler = new ClientLogoCycler();
 const acceleratingGlobe = new AcceleratingGlobe();
+const flickCards = new FlickCards();
 
 renderer.setSize(container.clientWidth, container.clientHeight);
 mountainScene.resize(container.clientWidth, container.clientHeight);
@@ -212,6 +214,7 @@ if (barba) {
           document.body.classList.add('is-transitioning');
           clientLogoCycler.destroy(); // Stop cycler
           acceleratingGlobe.destroy(); // Stop globe animation
+          flickCards.destroy(); // Stop flick cards
 
           // Return a Promise to force Barba to wait
           return new Promise((resolve) => {
@@ -330,6 +333,7 @@ if (barba) {
           scrollBender.resize(); // Re-cache elements after new content loaded
           clientLogoCycler.init(); // Re-init cycler
           acceleratingGlobe.init(); // Re-init globe
+          flickCards.init(); // Re-init flick cards
         },
       },
     ],
@@ -358,6 +362,7 @@ const initialNs = initialContainer.dataset.namespace;
 updateRouteState(initialNs, initialContainer);
 clientLogoCycler.init(); // Initialize logo cycler
 acceleratingGlobe.init(); // Initialize globe animation
+flickCards.init(); // Initialize flick cards
 
 // === ANIMATION LOOP ===
 

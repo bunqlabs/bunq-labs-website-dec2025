@@ -210,3 +210,49 @@ main {
 .logo-item.changing img {
   opacity: 0;
 }
+
+/* FLICK CARDS */
+[data-flick-cards-dragger] {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: auto;
+  touch-action: pan-y;
+}
+
+/* Position Slides */
+[data-flick-cards-item-status] .flick-card__media,
+.wf-design-mode .flick-card__media,
+.w-editor .flick-card__media {
+  transition: opacity 0.2s ease;
+  opacity: 0.5;
+}
+
+[data-flick-cards-item-status="2-before"] .flick-card__media,
+[data-flick-cards-item-status="2-after"] .flick-card__media {
+  transition: opacity 0.2s ease;
+  opacity: 0.75;
+}
+
+[data-flick-cards-item-status="active"] .flick-card__media {
+  opacity: 1;
+}
+
+/* Animate Button */
+[data-flick-cards-item-status] .flick-card__btn {
+  transition: opacity 0.4s cubic-bezier(0.625, 0.05, 0, 1), 1s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 0;
+  transform: translate(0%, 50%) rotate(0.001deg);
+}
+
+[data-flick-cards-item-status="active"] .flick-card__btn {
+  opacity: 1;
+  transform: translate(0%, 0%) rotate(0.001deg);
+}
+
+[data-flick-drag-status="grabbing"] {
+    cursor: grabbing;
+}
+[data-flick-drag-status="grab"] {
+    cursor: grab;
+}
