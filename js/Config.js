@@ -4,7 +4,7 @@ export const Config = {
         snowArea: { x: 0.5, y: 0.5, z: 0.5 },
         screenWidth: 0.192,
         screenHeight: 0.108,
-        screenLightIntensity: 1000,
+        screenLightIntensity: 2000,
         videoSampleResolution: { w: 4, h: 4 },
         lightUpdateSkipThreshold: 0.1 // Skip if frame time > 100ms
     },
