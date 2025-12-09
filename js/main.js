@@ -445,14 +445,47 @@ function animate() {
 animate();
 
 // Initial Load Complete: Fade out the global loader
+// Initial Load Complete: Interactive entry
 const initialLoader = document.querySelector('.global-loader');
-if (initialLoader) {
-  // Wait 2 seconds to ensure first frame render and show branding
+const loaderBtn = document.getElementById('loader-button');
+
+if (initialLoader && loaderBtn) {
+  // 1. Start Dot Animation
+  let dots = 0;
+  const dotInterval = setInterval(() => {
+    dots = (dots + 1) % 4; // 0, 1, 2, 3
+    loaderBtn.textContent = 'Loading' + '.'.repeat(dots);
+  }, 500);
+
+  // 2. Wait for "Ready" (simulated here by 2s delay, or real load event)
   gsap.delayedCall(2.0, () => {
-    gsap.to(initialLoader, {
-      opacity: 0,
-      pointerEvents: 'none',
-      duration: 0.5,
-    });
+    clearInterval(dotInterval);
+    loaderBtn.textContent = 'Click to Enter';
+    loaderBtn.classList.remove('is-secondary');
+
+    // 3. User Interaction
+    loaderBtn.addEventListener(
+      'click',
+      () => {
+        // Unlock Audio Context
+        audioManager.unlock();
+
+        // Play Video (Force Mobile Play)
+        if (mountainScene.video) {
+          mountainScene.video
+            .play()
+            .catch((e) => console.log('Video play failed', e));
+          mountainScene.playVideo(); // Ensure scene state matches
+        }
+
+        // Animate Out
+        gsap.to(initialLoader, {
+          opacity: 0,
+          pointerEvents: 'none',
+          duration: 0.5,
+        });
+      },
+      { once: true }
+    );
   });
 }

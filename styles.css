@@ -167,12 +167,29 @@ main {
   pointer-events: none;
 }
 
-.global-loader h2 {
+.global-loader h2,
+#loader-button {
   color: white;
   font-family: 'Inter', sans-serif;
   font-size: 1.5rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  background: none;
+  border: 1px solid white;
+  padding: 15px 30px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+#loader-button.is-secondary {
+  opacity: 0.5;
+  pointer-events: none;
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+#loader-button:hover {
+  background: white;
+  color: black;
 }
 
 /* LOGO GRID */
