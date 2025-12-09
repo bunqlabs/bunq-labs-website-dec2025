@@ -250,7 +250,7 @@ export class MountainScene {
             color: 0xffffff,
             size: 0.004,
             transparent: true,
-            opacity: 0.03,
+            opacity: 0.1,
             depthWrite: false,
         });
 
