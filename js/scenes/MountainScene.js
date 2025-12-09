@@ -25,8 +25,9 @@ export class MountainScene {
         this.video = null;
 
         // Persistent color object (GC Fix)
-        // this.tempColor = new THREE.Color();
-        // this.pixelBuffer = new Uint8Array(4); // Removed
+        this.tempColor = new THREE.Color();
+        this.targetColor = new THREE.Color();
+        this.pixelBuffer = new Uint8ClampedArray(4 * 4 * 4); // 4x4 RGBA
 
 
         // Performance State
@@ -176,8 +177,13 @@ export class MountainScene {
         this.screenLight.rotation.y = Math.PI;
         this.screenMesh.add(this.screenLight);
 
-        // WEBGL LIGHT SAMPLING REMOVED
-        // Replaced with static grey light for performance
+        // WEBGL LIGHT SAMPLING - OPTIMIZED
+        this.lightSamplerCanvas = document.createElement('canvas');
+        this.lightSamplerCanvas.width = 4;
+        this.lightSamplerCanvas.height = 4;
+        this.lightSamplerCtx = this.lightSamplerCanvas.getContext('2d', { willReadFrequently: true });
+        this.lastLightUpdate = 0;
+        this.lightUpdateInterval = 0.1; // 10 updates per second
     }
 
     // === SCENE SETUP & UTILS ===
@@ -299,7 +305,37 @@ export class MountainScene {
         this.updatePerformanceConfig(width, height);
     }
 
-    // updateLightFromVideo removed
+    updateLightFromVideo(dt) {
+        if (!this.video || this.video.paused || !this.lightSamplerCtx) return;
+
+        this.lastLightUpdate += dt;
+        if (this.lastLightUpdate > this.lightUpdateInterval) {
+            this.lastLightUpdate = 0;
+
+            // Draw small 4d frame
+            this.lightSamplerCtx.drawImage(this.video, 0, 0, 4, 4);
+            const frame = this.lightSamplerCtx.getImageData(0, 0, 4, 4);
+            const data = frame.data;
+
+            let r = 0, g = 0, b = 0;
+            const len = data.length;
+            const pixelCount = len / 4;
+
+            for (let i = 0; i < len; i += 4) {
+                r += data[i];
+                g += data[i + 1];
+                b += data[i + 2];
+            }
+
+            // SRGB -> Linear approximation (roughly pow 2.2, but simplified here)
+            // Just normalize 0-1
+            this.targetColor.setRGB(r / pixelCount / 255, g / pixelCount / 255, b / pixelCount / 255);
+        }
+
+        // Smooth interpolation for every frame
+        const lerpFactor = 5 * dt; // Adjust speed of color change
+        this.screenLight.color.lerp(this.targetColor, lerpFactor);
+    }
 
 
     updateSnow(time, dt) {
@@ -325,7 +361,8 @@ export class MountainScene {
 
     update(time, dt) {
         this.perfMonitor.update(dt);
-        // this.updateLightFromVideo(dt); // Removed
+        this.perfMonitor.update(dt);
+        this.updateLightFromVideo(dt);
 
         this.updateSnow(time, dt);
     }
