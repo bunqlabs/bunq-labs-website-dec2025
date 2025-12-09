@@ -149,6 +149,7 @@ export class MountainScene {
         this.contentGroup.add(this.screenMesh);
 
         this.video = document.createElement('video');
+        this.video.crossOrigin = 'anonymous';
         this.video.src = 'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/video/showreel.mp4';
         this.video.muted = true;
         this.video.loop = true;
@@ -183,7 +184,9 @@ export class MountainScene {
 
     initLoader() {
         const loader = new GLTFLoader();
+        loader.setCrossOrigin('anonymous');
         const texLoader = new THREE.TextureLoader();
+        texLoader.setCrossOrigin('anonymous');
 
         const mountainTex = texLoader.load('https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/textures/mountain_texture.webp', () => { });
 

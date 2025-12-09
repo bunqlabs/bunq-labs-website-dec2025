@@ -16,7 +16,7 @@ export const Config = {
         mobileMaxGrassCount: 15000,
         mobileDPR: 1, // Force lower resolution on mobile
         minDPR: 1, // Absolute minimum DPR
-        bladeWidth: 0.4,
+        bladeWidth: 0.3,
         bladeHeight: 1.0,
         maxWindOffset: 1.2, // Cap wind displacement to 1.2x height
         bladeSegments: 1,
