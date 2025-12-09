@@ -469,7 +469,6 @@ if (initialLoader && loaderBtn) {
     // Show Mute Option
     if (loaderBtnMute) {
       loaderBtnMute.style.display = 'block';
-      loaderBtnMute.classList.remove('is-secondary');
     }
 
     // 3a. Main Interaction (With Audio)
