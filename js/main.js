@@ -5,6 +5,7 @@ import { GrassScene } from './scenes/GrassScene.js';
 import { ScrollBender } from './components/ScrollBender.js';
 import { AudioManager } from './components/AudioManager.js';
 import { ClientLogoCycler } from './components/ClientLogoCycler.js';
+import { AcceleratingGlobe } from './components/AcceleratingGlobe.js';
 import gsap from 'https://unpkg.com/gsap@3.12.5/index.js?module';
 
 // === CONFIGURATION & STATE ===
@@ -50,6 +51,7 @@ const grassScene = new GrassScene(renderer);
 const scrollBender = new ScrollBender();
 const audioManager = new AudioManager();
 const clientLogoCycler = new ClientLogoCycler();
+const acceleratingGlobe = new AcceleratingGlobe();
 
 renderer.setSize(container.clientWidth, container.clientHeight);
 mountainScene.resize(container.clientWidth, container.clientHeight);
@@ -209,6 +211,7 @@ if (barba) {
           // Lock Interaction
           document.body.classList.add('is-transitioning');
           clientLogoCycler.destroy(); // Stop cycler
+          acceleratingGlobe.destroy(); // Stop globe animation
 
           // Return a Promise to force Barba to wait
           return new Promise((resolve) => {
@@ -326,6 +329,7 @@ if (barba) {
           calcMountainConfig();
           scrollBender.resize(); // Re-cache elements after new content loaded
           clientLogoCycler.init(); // Re-init cycler
+          acceleratingGlobe.init(); // Re-init globe
         },
       },
     ],
@@ -353,6 +357,7 @@ const initialContainer = document.querySelector('[data-barba="container"]');
 const initialNs = initialContainer.dataset.namespace;
 updateRouteState(initialNs, initialContainer);
 clientLogoCycler.init(); // Initialize logo cycler
+acceleratingGlobe.init(); // Initialize globe animation
 
 // === ANIMATION LOOP ===
 

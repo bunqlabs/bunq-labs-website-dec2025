@@ -17,7 +17,8 @@ export class ClientLogoCycler {
       'Svayam.png',
       'Tedy.png',
     ];
-    this.basePath = 'assets/images/client-logos/';
+    this.basePath =
+      'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/images/client-logos/';
     this.cycleInterval = 3000;
     this.intervalId = null;
     this.slots = [];
