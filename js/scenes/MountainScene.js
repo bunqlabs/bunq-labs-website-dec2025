@@ -430,11 +430,12 @@ export class MountainScene {
         // Wait, camera is at 0.65, objects are at 0. Distance is 0.65.
         // h = 2 * 0.65 * tan(20deg) = 1.3 * 0.364 = 0.473
 
-        const visibleHeightAtDist0 = 0.473;
+        const visibleHeightAtDist0 = 0.3;
         const scrollRatio = scrollY / window.innerHeight;
 
         // We move the GROUP UP (positive Y) as we scroll DOWN.
-        // Total range of 1 viewport height should move the content up by 1 visible height
-        this.contentGroup.position.y = scrollRatio * visibleHeightAtDist0;
+        // Parallax: 100vh scroll -> Move UP by 50vh (0.5 factor)
+        // This makes it look like it's scrolling slower than the foreground.
+        this.contentGroup.position.y = scrollRatio * visibleHeightAtDist0 * 0.5;
     }
 }
