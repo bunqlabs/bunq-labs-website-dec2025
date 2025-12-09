@@ -19,12 +19,6 @@ export class AudioManager {
     this.audio.volume = 0; // Start silent for fade-in
     this.audio.preload = 'auto';
 
-    // "Unlock" audio on first interaction
-    this.unlockHandler = this.unlock.bind(this);
-    window.addEventListener('click', this.unlockHandler, { once: true });
-    window.addEventListener('touchstart', this.unlockHandler, { once: true });
-    window.addEventListener('keydown', this.unlockHandler, { once: true });
-
     // Visibility API for pausing (optional, but good for background)
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
@@ -42,9 +36,6 @@ export class AudioManager {
   unlock() {
     if (this.isPlaying) return;
 
-    // Try to play. If it works, WE ARE GOOD.
-    // If it fails (NotAllowed), we stay in "locked" state and wait for next event.
-
     if (!this.audio) return;
 
     this.audio
@@ -52,23 +43,11 @@ export class AudioManager {
       .then(() => {
         console.log('[Audio] Unlocked successfully.');
         this.isPlaying = true;
-
-        // Remove listeners only AFTER success
-        window.removeEventListener('click', this.unlockHandler);
-        window.removeEventListener('touchstart', this.unlockHandler);
-        window.removeEventListener('keydown', this.unlockHandler);
-
         this.fadeTo(this.volume);
         this.updateUI();
       })
       .catch((err) => {
-        console.warn(
-          '[Audio] Autoplay blocked (retry on next interaction):',
-          err.message
-        );
-        // Do NOT set isPlaying = true.
-        // Do NOT remove listeners.
-        // Let the next click/touch try again.
+        console.warn('[Audio] Autoplay blocked:', err.message);
       });
   }
 
@@ -93,13 +72,34 @@ export class AudioManager {
     });
   }
 
-  toggleMute() {
-    this.isMuted = !this.isMuted;
+  setMute(shouldBeMuted) {
+    this.isMuted = shouldBeMuted;
     if (this.isMuted) {
       this.fadeTo(0);
     } else {
-      this.fadeTo(this.volume);
+      if (this.audio && this.audio.paused) {
+        this.play();
+      } else {
+        this.fadeTo(this.volume);
+      }
     }
+    this.updateUI();
+  }
+
+  toggleMute() {
+    this.isMuted = !this.isMuted;
+
+    // If turning sound ON, we must ensure it's playing
+    if (!this.isMuted) {
+      if (this.audio.paused) {
+        this.play();
+      } else {
+        this.fadeTo(this.volume);
+      }
+    } else {
+      this.fadeTo(0);
+    }
+
     this.updateUI();
     return this.isMuted;
   }

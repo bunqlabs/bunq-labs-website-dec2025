@@ -187,9 +187,11 @@ main {
   border-color: rgba(255, 255, 255, 0.3);
 }
 
-#loader-button:hover {
+#loader-button:hover,
+#loader-button-mute:hover {
   background: white;
   color: black;
+  opacity: 1 !important; /* Force opacity for mute button */
 }
 
 /* LOGO GRID */

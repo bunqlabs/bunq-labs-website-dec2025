@@ -448,6 +448,7 @@ animate();
 // Initial Load Complete: Interactive entry
 const initialLoader = document.querySelector('.global-loader');
 const loaderBtn = document.getElementById('loader-button');
+const loaderBtnMute = document.getElementById('loader-button-mute');
 
 if (initialLoader && loaderBtn) {
   // 1. Start Dot Animation
@@ -465,30 +466,53 @@ if (initialLoader && loaderBtn) {
     loaderBtn.textContent = 'Click to Enter';
     loaderBtn.classList.remove('is-secondary');
 
-    // 3. User Interaction
+    // Show Mute Option
+    if (loaderBtnMute) {
+      loaderBtnMute.style.display = 'block';
+      loaderBtnMute.classList.remove('is-secondary');
+    }
+
+    // 3a. Main Interaction (With Audio)
     loaderBtn.addEventListener(
       'click',
       () => {
         // Unlock Audio Context
         audioManager.unlock();
-
-        // Play Video (Force Mobile Play)
-        if (mountainScene.video) {
-          mountainScene.video
-            .play()
-            .catch((e) => console.log('Video play failed', e));
-          mountainScene.playVideo(); // Ensure scene state matches
-        }
-
-        // Animate Out
-        gsap.to(initialLoader, {
-          opacity: 0,
-          pointerEvents: 'none',
-          duration: 0.5,
-        });
+        enterSite();
       },
       { once: true }
     );
+
+    // 3b. Mute Interaction (Without Audio)
+    if (loaderBtnMute) {
+      loaderBtnMute.addEventListener(
+        'click',
+        () => {
+          // Do NOT unlock audio context
+          console.log('Entering without audio context');
+          audioManager.setMute(true); // Update UI to 'SOUND OFF'
+          enterSite();
+        },
+        { once: true }
+      );
+    }
+
+    function enterSite() {
+      // Play Video (Force Mobile Play)
+      if (mountainScene.video) {
+        mountainScene.video
+          .play()
+          .catch((e) => console.log('Video play failed', e));
+        mountainScene.playVideo(); // Ensure scene state matches
+      }
+
+      // Animate Out
+      gsap.to(initialLoader, {
+        opacity: 0,
+        pointerEvents: 'none',
+        duration: 0.5,
+      });
+    }
   }
 
   if (video && video.readyState >= 3) {
