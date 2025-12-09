@@ -17,7 +17,7 @@ export const Config = {
         mobileDPR: 1, // Force lower resolution on mobile
         minDPR: 1, // Absolute minimum DPR
         bladeWidth: 0.3,
-        bladeHeight: 1.0,
+        bladeHeight: 1.2,
         maxWindOffset: 1.2, // Cap wind displacement to 1.2x height
         bladeSegments: 1,
         taperFactor: 0.05,
