@@ -248,9 +248,9 @@ export class MountainScene {
 
         const snowMat = new THREE.PointsMaterial({
             color: 0xffffff,
-            size: 0.004,
+            size: 0.002,
             transparent: true,
-            opacity: 0.1,
+            opacity: 0.4,
             depthWrite: false,
         });
 
