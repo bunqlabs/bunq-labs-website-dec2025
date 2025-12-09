@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { PerformanceMonitor } from '../utils/PerformanceMonitor.js';
 import { Config } from '../Config.js';
 
@@ -201,11 +202,18 @@ export class MountainScene {
   initLoader() {
     const loader = new GLTFLoader();
     loader.setCrossOrigin('anonymous');
+
+    const dracoLoader = new DRACOLoader();
+    dracoLoader.setDecoderPath(
+      'https://www.gstatic.com/draco/versioned/decoders/1.5.7/'
+    );
+    loader.setDRACOLoader(dracoLoader);
+
     const texLoader = new THREE.TextureLoader();
     texLoader.setCrossOrigin('anonymous');
 
     const mountainTex = texLoader.load(
-      'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/textures/mountain_texture.webp',
+      'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/textures/mountain_texture_optimised.webp',
       () => {}
     );
 
@@ -213,7 +221,7 @@ export class MountainScene {
     mountainTex.flipY = false;
 
     loader.load(
-      'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/models/mountain_export.glb',
+      'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/models/mountain_export_optimised.glb',
       (gltf) => {
         const root = gltf.scene || gltf.scenes[0];
         root.traverse((obj) => {

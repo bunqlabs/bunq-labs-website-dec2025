@@ -457,8 +457,10 @@ if (initialLoader && loaderBtn) {
     loaderBtn.textContent = 'Loading' + '.'.repeat(dots);
   }, 500);
 
-  // 2. Wait for "Ready" (simulated here by 2s delay, or real load event)
-  gsap.delayedCall(2.0, () => {
+  // 2. Wait for Video to be Ready (Real Load Event)
+  const video = mountainScene.video;
+
+  function onReady() {
     clearInterval(dotInterval);
     loaderBtn.textContent = 'Click to Enter';
     loaderBtn.classList.remove('is-secondary');
@@ -487,5 +489,23 @@ if (initialLoader && loaderBtn) {
       },
       { once: true }
     );
-  });
+  }
+
+  if (video && video.readyState >= 3) {
+    // HAVE_FUTURE_DATA or higher
+    onReady();
+  } else if (video) {
+    video.addEventListener('canplaythrough', onReady, { once: true });
+    video.addEventListener(
+      'error',
+      () => {
+        console.error('Video load error');
+        onReady(); // Allow entry anyway to prevent lock
+      },
+      { once: true }
+    );
+  } else {
+    // Fallback if no video element
+    onReady();
+  }
 }
