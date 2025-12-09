@@ -18,6 +18,10 @@ export class MountainScene {
 
         this.snowCount = Config.Mountain.snowCount;
         this.snowArea = Config.Mountain.snowArea;
+        this.snowFallSpeed = Config.Mountain.snowFallSpeed || 0.2;
+        this.snowSway = Config.Mountain.snowSway || 0.0005;
+        this.snowWindX = Config.Mountain.snowWindX || 0.0;
+        this.snowWindZ = Config.Mountain.snowWindZ || 0.0;
         this.lightUpdateFrame = 0;
 
         this.mixer = null;
@@ -344,9 +348,9 @@ export class MountainScene {
         const spd = this.snowGeo.getAttribute('aSpeed');
 
         for (let i = 0; i < this.snowCount; i++) {
-            let x = pos.getX(i) + Math.sin(i * 12.9898 + time * 0.5) * 0.0005;
-            let y = pos.getY(i) - spd.getX(i) * dt * 0.2;
-            let z = pos.getZ(i) + Math.cos(i * 78.233 + time * 0.3) * 0.0005;
+            let x = pos.getX(i) + Math.sin(i * 12.9898 + time * 0.5) * this.snowSway + this.snowWindX * dt;
+            let y = pos.getY(i) - spd.getX(i) * dt * this.snowFallSpeed;
+            let z = pos.getZ(i) + Math.cos(i * 78.233 + time * 0.3) * this.snowSway + this.snowWindZ * dt;
 
             if (y < -this.snowArea.y * 0.5) y = this.snowArea.y * 0.5;
             if (x < -this.snowArea.x * 0.5) x = -this.snowArea.x * 0.5;
