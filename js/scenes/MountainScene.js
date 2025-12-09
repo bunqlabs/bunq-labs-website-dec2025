@@ -183,7 +183,7 @@ export class MountainScene {
         this.lightSamplerCanvas.height = 4;
         this.lightSamplerCtx = this.lightSamplerCanvas.getContext('2d', { willReadFrequently: true });
         this.lastLightUpdate = 0;
-        this.lightUpdateInterval = 0.1; // 10 updates per second
+        this.lightUpdateInterval = 0.25; // 4 updates per second
     }
 
     // === SCENE SETUP & UTILS ===
