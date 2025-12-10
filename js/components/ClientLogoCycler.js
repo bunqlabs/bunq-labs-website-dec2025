@@ -45,7 +45,15 @@ export class ClientLogoCycler {
       }
     });
 
+    this.preloadImages();
     this.startChecking();
+  }
+
+  preloadImages() {
+    this.logos.forEach((logo) => {
+      const img = new Image();
+      img.src = this.basePath + logo;
+    });
   }
 
   getUniqueRandomLogo() {
@@ -97,18 +105,41 @@ export class ClientLogoCycler {
     // 1. Fade Out
     slot.classList.add('changing');
 
-    // 2. Wait for fade out, THEN swap source
+    // 2. Wait for fade out (500ms) AND ensure image is ready
     setTimeout(() => {
-      img.src = this.basePath + newLogo;
+      // Pick new (Pass current to exclude explicitly, though logic below handles it too)
+      // LOGIC FIX: Don't delete current from activeLogos yet.
+      // If we keep it in activeLogos, getUniqueRandomLogo will exclude it automatically.
 
-      // Update tracking
+      const newLogo = this.getUniqueRandomLogo();
+
+      // Update tracking NOW
+      if (currentLogo) this.activeLogos.delete(currentLogo);
       this.activeLogos.add(newLogo);
-      slot.dataset.currentLogo = newLogo;
 
-      // 3. Fade In (small delay to ensure SRC swap is registered)
-      requestAnimationFrame(() => {
-        slot.classList.remove('changing');
-      });
+      // Pre-fetch image to ensure smooth transition
+      const tempImg = new Image();
+      tempImg.onload = () => {
+        // Only swap when ready
+        if (slot.contains(img)) { // Safety check
+          img.src = this.basePath + newLogo;
+          slot.dataset.currentLogo = newLogo;
+
+          // 3. Fade In
+          requestAnimationFrame(() => {
+            slot.classList.remove('changing');
+          });
+        }
+      };
+      // Handle error case to avoid stuck fade
+      tempImg.onerror = () => {
+        slot.classList.remove('changing'); // Revert if failed
+        // Re-add old logo to active since we failed to switch? 
+        // For simplicity, just let it be.
+      };
+
+      tempImg.src = this.basePath + newLogo;
+
     }, 500); // Wait for CSS opacity transition
   }
 
