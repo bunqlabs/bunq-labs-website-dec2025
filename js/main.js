@@ -7,6 +7,7 @@ import { AudioManager } from './components/AudioManager.js';
 import { ClientLogoCycler } from './components/ClientLogoCycler.js';
 import { AcceleratingGlobe } from './components/AcceleratingGlobe.js';
 import { FlickCards } from './components/FlickCards.js';
+import { Navigation } from './components/Navigation.js';
 import gsap from 'https://unpkg.com/gsap@3.12.5/index.js?module';
 
 // === CONFIGURATION & STATE ===
@@ -54,6 +55,7 @@ const audioManager = new AudioManager();
 const clientLogoCycler = new ClientLogoCycler();
 const acceleratingGlobe = new AcceleratingGlobe();
 const flickCards = new FlickCards();
+const navigation = new Navigation();
 
 renderer.setSize(container.clientWidth, container.clientHeight);
 mountainScene.resize(container.clientWidth, container.clientHeight);
