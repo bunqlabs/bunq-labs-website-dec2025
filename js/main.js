@@ -24,6 +24,7 @@ let mountainVisible = false;
 let lastMountainVisible = false; // Track previous state for transitions
 let transitionGlobalFade = false;
 let isTransitioning = false;
+let siteEntered = false;
 
 // Scroll State
 let currentScrollY = window.scrollY;
@@ -411,12 +412,20 @@ function animate() {
 
   // === VIDEO PLAYBACK CONTROL ===
   if (mountainVisible !== lastMountainVisible) {
-    if (mountainVisible) {
+    if (mountainVisible && siteEntered) {
       mountainScene.playVideo();
     } else {
       mountainScene.pauseVideo();
     }
     lastMountainVisible = mountainVisible;
+  } else if (
+    mountainVisible &&
+    siteEntered &&
+    mountainScene.video &&
+    mountainScene.video.paused
+  ) {
+    // Ensure it plays if visible and entered (fix for "stops after a while" or initial load race)
+    mountainScene.playVideo();
   }
 
   // RENDER ORDER & EXCLUSIVITY:
@@ -499,13 +508,11 @@ if (initialLoader && loaderBtn) {
     }
 
     function enterSite() {
-      // Play Video (Force Mobile Play)
-      if (mountainScene.video) {
-        mountainScene.video
-          .play()
-          .catch((e) => console.log('Video play failed', e));
-        mountainScene.playVideo(); // Ensure scene state matches
-      }
+      siteEntered = true;
+      // Trigger Animation
+      mountainScene.animateEntry();
+
+      // Animate Out Loader
 
       // Animate Out
       gsap.to(initialLoader, {

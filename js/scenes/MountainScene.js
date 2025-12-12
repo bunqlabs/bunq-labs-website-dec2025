@@ -3,6 +3,7 @@ import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
 import { PerformanceMonitor } from '../utils/PerformanceMonitor.js';
 import { Config } from '../Config.js';
+import gsap from 'https://unpkg.com/gsap@3.12.5/index.js?module';
 
 export class MountainScene {
   // === LIFECYCLE ===
@@ -105,10 +106,10 @@ export class MountainScene {
     this.camera = new THREE.PerspectiveCamera(
       40,
       window.innerWidth / window.innerHeight,
-      0.1,
+      0.01,
       2000
     );
-    this.camera.position.set(0, 0, 0.65);
+    this.camera.position.set(0, 0, 0.01); // Start zoomed in
   }
 
   initBackground() {
@@ -139,6 +140,7 @@ export class MountainScene {
         map: this.bgTexture,
         depthWrite: false,
         side: THREE.DoubleSide,
+        color: 0x000000, // Start Black
       })
     );
     // Push it slightly back so other objects are in front
@@ -165,7 +167,8 @@ export class MountainScene {
     this.video.loop = true;
     this.video.playsInline = true;
     this.video.preload = 'auto';
-    this.video.autoplay = true;
+    this.video.preload = 'auto';
+    // this.video.autoplay = true; // Manual control only
 
     this.videoTexture = new THREE.VideoTexture(this.video);
     this.videoTexture.colorSpace = THREE.SRGBColorSpace;
@@ -451,8 +454,41 @@ export class MountainScene {
   // === EVENTS ===
 
   resumeVideo = () => {
+    // Only resume if explicitly allowed (handled by main.js logic ideally, but as a fallback)
+    // If we are strictly controlled by main.js, this might be redundant or conflicting.
+    // keeping it simple:
     this.playVideo();
   };
+
+  animateEntry() {
+    console.log('[Mountain] animateEntry()');
+
+    // 1. Camera Zoom
+    gsap.to(this.camera.position, {
+      z: 0.65,
+      duration: 3.0,
+      ease: 'power3.out',
+      onUpdate: () => {
+        // any constant updates if needed
+      },
+    });
+
+    // 2. Background Color Fade (Black -> White (modulates texture))
+    // The texture has the gradient. Modulating with White shows texture as is.
+    // Modulating with Black shows black.
+    if (this.bgMesh && this.bgMesh.material) {
+      gsap.to(this.bgMesh.material.color, {
+        r: 1,
+        g: 1,
+        b: 1,
+        duration: 3.0,
+        ease: 'linear',
+      });
+    }
+
+    // 3. Play Video
+    this.playVideo();
+  }
 
   updateScroll(scrollY) {
     // approximate visible height conversion
