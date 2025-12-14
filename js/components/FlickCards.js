@@ -92,7 +92,7 @@ export class FlickCards {
 
           gsap.to(card, {
             duration: 1,
-            ease: 'expo.inOut',
+            ease: 'elastic.out(1.2, 1)',
             xPercent: cfg.x,
             yPercent: cfg.y,
             rotation: cfg.rot,
