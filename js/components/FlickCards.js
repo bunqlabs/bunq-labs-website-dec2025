@@ -14,6 +14,10 @@ export class FlickCards {
     const sliders = document.querySelectorAll('[data-flick-cards-init]');
     if (sliders.length === 0) return;
 
+    // Helper to find specific buttons if they exist
+    const leftBtn = document.getElementById('flick-control-left');
+    const rightBtn = document.getElementById('flick-control-right');
+
     sliders.forEach((slider) => {
       const list = slider.querySelector('[data-flick-cards-list]');
       if (!list) return;
@@ -179,8 +183,31 @@ export class FlickCards {
         },
       });
 
+      // --- Control Buttons Handling ---
+      const handleLeft = () => {
+        activeIndex = (activeIndex - 1 + total) % total;
+        renderCards(activeIndex);
+      };
+
+      const handleRight = () => {
+        activeIndex = (activeIndex + 1) % total;
+        renderCards(activeIndex);
+      };
+
+      if (leftBtn) leftBtn.addEventListener('click', handleLeft);
+      if (rightBtn) rightBtn.addEventListener('click', handleRight);
+
       // Store instance for cleanup
-      this.sliders.push({ slider, draggables: draggableInstance });
+      this.sliders.push({
+        slider,
+        draggables: draggableInstance,
+        buttons: {
+          left: leftBtn,
+          right: rightBtn,
+          handleLeft,
+          handleRight,
+        },
+      });
     });
   }
 
@@ -188,6 +215,19 @@ export class FlickCards {
     this.sliders.forEach((item) => {
       // Draggable.create returns an array
       item.draggables.forEach((d) => d.kill());
+
+      // Clean up button listeners
+      if (item.buttons) {
+        if (item.buttons.left) {
+          item.buttons.left.removeEventListener('click', item.buttons.handleLeft);
+        }
+        if (item.buttons.right) {
+          item.buttons.right.removeEventListener(
+            'click',
+            item.buttons.handleRight
+          );
+        }
+      }
 
       // Clean up injected DOM if needed, but 'dragger' div removal is handled in init
     });
