@@ -399,9 +399,10 @@ function animate() {
   } else if (isHome) {
     // Normal Runtime Check
     // If config is not yet set (height 0), assume it's visible (Home default)
-    if (mountainConfig.height === 0) {
+    // BUT only if mountainEl actually exists (otherwise we are not effectively on home or element is missing)
+    if (mountainEl && mountainConfig.height === 0) {
       mountainVisible = true;
-    } else {
+    } else if (mountainEl) {
       // Standard check: is it effectively on screen?
       const elTop = mountainConfig.top - currentScrollY;
       if (elTop + mountainConfig.height > 0 && elTop < window.innerHeight) {
