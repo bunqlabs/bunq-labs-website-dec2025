@@ -91,7 +91,7 @@ export class FlickCards {
           card.style.zIndex = cfg.z;
 
           gsap.to(card, {
-            duration: 0.6,
+            duration: 1,
             ease: 'expo.inOut',
             xPercent: cfg.x,
             yPercent: cfg.y,
