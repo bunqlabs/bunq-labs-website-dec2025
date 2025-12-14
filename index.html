@@ -1,24 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Interactive Grass Plane with Three.js</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
 
-  <body>
-    <div id="canvas-container">
-      <div id="webgl"></div>
-    </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interactive Grass Plane with Three.js</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
 
-    <nav style="position: fixed; top: 20px; right: 20px; z-index: 1000">
-      <a href="index.html" style="color: white; margin-right: 10px">Home</a>
-      <a href="about.html" style="color: white">About</a>
-      <a href="work.html" style="color: white">Work</a>
-      <button
-        id="audio-toggle"
-        style="
+<body>
+  <div id="canvas-container">
+    <div id="webgl"></div>
+  </div>
+  <div id="webgl-gradient" class="gradient"></div>
+
+  <nav style="position: fixed; top: 20px; right: 20px; z-index: 1000">
+    <a href="index.html" style="color: white; margin-right: 10px">Home</a>
+    <a href="about.html" style="color: white">About</a>
+    <a href="work.html" style="color: white">Work</a>
+    <button id="audio-toggle" style="
           background: none;
           border: 1px solid white;
           color: white;
@@ -27,102 +27,86 @@
           margin-left: 20px;
           font-family: monospace;
           opacity: 0.5;
-        "
-      >
-        SOUND ON
-      </button>
-    </nav>
+        ">
+      SOUND ON
+    </button>
+  </nav>
 
-    <main data-barba="wrapper" class="main-wrapper">
-      <div data-barba="container" data-namespace="home" class="barba-container">
-        <div
-          id="mountain-hero"
-          class="hero-section"
-          style="height: 100lvh; width: 100%; position: relative"
-        >
-          <!-- Mountain scene will be scissor-rendered here -->
-        </div>
+  <main data-barba="wrapper" class="main-wrapper">
+    <div data-barba="container" data-namespace="home" class="barba-container">
+      <div id="mountain-hero" class="hero-section" style="height: 100lvh; width: 100%; position: relative">
+        <!-- Mountain scene will be scissor-rendered here -->
+      </div>
 
-        <div class="content-section">
-          <h1 style="color: white; margin-bottom: 50px">Bending Cards Demo</h1>
-          <div class="card-grid">
-            <div class="card" data-bend-on-scroll data-bend-max="9">
-              <h2>Project Alpha</h2>
-              <p>Bends 15 degrees on scroll.</p>
-            </div>
-            <div class="card" data-bend-on-scroll data-bend-max="9">
-              <h2>Project Beta</h2>
-              <p>Extreme 25 degree bend.</p>
-            </div>
-            <div class="card" data-bend-on-scroll data-bend-max="9">
-              <h2>Project Gamma</h2>
-              <p>Subtle 10 degree bend.</p>
-            </div>
-            <div class="card" data-bend-on-scroll data-bend-max="9">
-              <h2>Reverse Bend</h2>
-              <p>Bends backwards (-15deg).</p>
-            </div>
+      <div class="content-section">
+        <h1 style="color: white; margin-bottom: 50px">Bending Cards Demo</h1>
+        <div class="card-grid">
+          <div class="card" data-bend-on-scroll data-bend-max="9">
+            <h2>Project Alpha</h2>
+            <p>Bends 15 degrees on scroll.</p>
           </div>
-        </div>
-
-        <div class="content-section">
-          <div
-            class="card"
-            style="width: 80%; height: 400px"
-            data-bend-on-scroll
-            data-bend-max="15"
-          >
-            <h2>Large Hero Card</h2>
-            <p>A single large element demonstration.</p>
+          <div class="card" data-bend-on-scroll data-bend-max="9">
+            <h2>Project Beta</h2>
+            <p>Extreme 25 degree bend.</p>
           </div>
-        </div>
-
-        <div class="content-section">
-          <h2 style="color: white; margin-bottom: 30px">Our Clients</h2>
-          <div class="logo-grid">
-            <div class="logo-item" data-client-logo>
-              <img src="" alt="Client Logo" />
-            </div>
-            <div class="logo-item" data-client-logo>
-              <img src="" alt="Client Logo" />
-            </div>
-            <div class="logo-item" data-client-logo>
-              <img src="" alt="Client Logo" />
-            </div>
-            <div class="logo-item" data-client-logo>
-              <img src="" alt="Client Logo" />
-            </div>
+          <div class="card" data-bend-on-scroll data-bend-max="9">
+            <h2>Project Gamma</h2>
+            <p>Subtle 10 degree bend.</p>
+          </div>
+          <div class="card" data-bend-on-scroll data-bend-max="9">
+            <h2>Reverse Bend</h2>
+            <p>Bends backwards (-15deg).</p>
           </div>
         </div>
       </div>
-    </main>
-    <div class="global-loader">
-      <div
-        style="
+
+      <div class="content-section">
+        <div class="card" style="width: 80%; height: 400px" data-bend-on-scroll data-bend-max="15">
+          <h2>Large Hero Card</h2>
+          <p>A single large element demonstration.</p>
+        </div>
+      </div>
+
+      <div class="content-section">
+        <h2 style="color: white; margin-bottom: 30px">Our Clients</h2>
+        <div class="logo-grid">
+          <div class="logo-item" data-client-logo>
+            <img src="" alt="Client Logo" />
+          </div>
+          <div class="logo-item" data-client-logo>
+            <img src="" alt="Client Logo" />
+          </div>
+          <div class="logo-item" data-client-logo>
+            <img src="" alt="Client Logo" />
+          </div>
+          <div class="logo-item" data-client-logo>
+            <img src="" alt="Client Logo" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+  <div class="global-loader">
+    <div style="
           display: flex;
           flex-direction: column;
           align-items: center;
           gap: 20px;
-        "
-      >
-        <button id="loader-button" class="is-secondary">Loading</button>
-        <button
-          id="loader-button-mute"
-          class="is-secondary"
-          style="
+        ">
+      <button id="loader-button" class="is-secondary">Loading</button>
+      <button id="loader-button-mute" class="is-secondary" style="
             display: none;
             font-size: 0.9rem;
             border: none;
             padding: 10px;
             opacity: 0.7;
-          "
-        >
-          Enter without audio
-        </button>
-      </div>
+          ">
+        Enter without audio
+      </button>
     </div>
+  </div>
 
-    <script type="importmap">
+  <script type="importmap">
       {
         "imports": {
           "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
@@ -130,7 +114,8 @@
         }
       }
     </script>
-    <script src="https://unpkg.com/@barba/core"></script>
-    <script type="module" src="./js/main.js"></script>
-  </body>
+  <script src="https://unpkg.com/@barba/core"></script>
+  <script type="module" src="./js/main.js"></script>
+</body>
+
 </html>

@@ -14,6 +14,7 @@ import gsap from 'https://unpkg.com/gsap@3.12.5/index.js?module';
 
 const barba = window.barba;
 const container = document.getElementById('webgl');
+const gradientEl = document.getElementById('webgl-gradient');
 const clock = new THREE.Clock();
 const stats = new Stats();
 
@@ -449,6 +450,19 @@ function animate() {
 
   // Update scroll bending effect independently of scenes
   scrollBender.update(currentScrollY);
+
+  // === GRADIENT OVERLAY ANIMATION ===
+  if (gradientEl) {
+    if (isHome) {
+      // 0 opacity at scroll 0, 1 opacity at scroll 100vh (window.innerHeight)
+      const h = window.innerHeight;
+      const opacity = Math.min(1, Math.max(0, currentScrollY / h));
+      gradientEl.style.opacity = opacity;
+    } else {
+      // Always visible on other pages
+      gradientEl.style.opacity = 1;
+    }
+  }
 
   stats.end();
 }
