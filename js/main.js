@@ -8,6 +8,7 @@ import { ClientLogoCycler } from './components/ClientLogoCycler.js';
 import { AcceleratingGlobe } from './components/AcceleratingGlobe.js';
 import { FlickCards } from './components/FlickCards.js';
 import { Navigation } from './components/Navigation.js';
+import { TextScrambler } from './components/TextScrambler.js';
 import gsap from 'https://unpkg.com/gsap@3.12.5/index.js?module';
 
 // === CONFIGURATION & STATE ===
@@ -66,10 +67,12 @@ const clientLogoCycler = new ClientLogoCycler();
 const acceleratingGlobe = new AcceleratingGlobe();
 const flickCards = new FlickCards();
 const navigation = new Navigation();
+const textScrambler = new TextScrambler();
 
 renderer.setSize(container.clientWidth, container.clientHeight);
 mountainScene.resize(container.clientWidth, container.clientHeight);
 grassScene.resize(container.clientWidth, container.clientHeight);
+textScrambler.init();
 
 // === LOGIC ===
 
