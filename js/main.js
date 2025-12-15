@@ -39,7 +39,15 @@ stats.dom.style.position = 'fixed';
 stats.dom.style.left = '8px';
 stats.dom.style.top = '8px';
 stats.dom.style.zIndex = '2000';
+stats.dom.style.display = 'none';
 document.body.appendChild(stats.dom);
+
+// Toggle stats visibility on Shift+D
+document.addEventListener('keydown', (e) => {
+  if (e.shiftKey && (e.key === 'D' || e.key === 'd')) {
+    stats.dom.style.display = stats.dom.style.display === 'none' ? 'block' : 'none';
+  }
+});
 
 const renderer = new THREE.WebGLRenderer({
   antialias: window.devicePixelRatio < 2,
