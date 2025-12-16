@@ -9,6 +9,7 @@ import { AcceleratingGlobe } from './components/AcceleratingGlobe.js';
 import { FlickCards } from './components/FlickCards.js';
 import { Navigation } from './components/Navigation.js';
 import { TextScrambler } from './components/TextScrambler.js';
+import { ServiceCards } from './components/ServiceCards.js';
 import gsap from 'https://unpkg.com/gsap@3.12.5/index.js?module';
 
 // === CONFIGURATION & STATE ===
@@ -351,7 +352,6 @@ if (barba) {
           scrollBender.resize(); // Re-cache elements after new content loaded
           clientLogoCycler.init(); // Re-init cycler
           acceleratingGlobe.init(); // Re-init globe
-          acceleratingGlobe.init(); // Re-init globe
           flickCards.init(); // Re-init flick cards
           serviceCards.init(); // Re-init service cards
         },
@@ -381,7 +381,6 @@ const initialContainer = document.querySelector('[data-barba="container"]');
 const initialNs = initialContainer.dataset.namespace;
 updateRouteState(initialNs, initialContainer);
 clientLogoCycler.init(); // Initialize logo cycler
-acceleratingGlobe.init(); // Initialize globe animation
 acceleratingGlobe.init(); // Initialize globe animation
 flickCards.init(); // Initialize flick cards
 serviceCards.init(); // Initialize service cards
