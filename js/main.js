@@ -1,16 +1,25 @@
-import * as THREE from 'three';
-import Stats from 'three/addons/libs/stats.module.js';
-import { MountainScene } from './scenes/MountainScene.js';
-import { GrassScene } from './scenes/GrassScene.js';
-import { ScrollBender } from './components/ScrollBender.js';
-import { AudioManager } from './components/AudioManager.js';
-import { ClientLogoCycler } from './components/ClientLogoCycler.js';
-import { AcceleratingGlobe } from './components/AcceleratingGlobe.js';
-import { FlickCards } from './components/FlickCards.js';
-import { Navigation } from './components/Navigation.js';
-import { TextScrambler } from './components/TextScrambler.js';
-import { ServiceCards } from './components/ServiceCards.js';
-import gsap from 'https://unpkg.com/gsap@3.12.5/index.js?module';
+// === IMPORTS ===
+import {
+  THREE,
+  Stats,
+  gsap,
+  Lenis,
+  MountainScene,
+  GrassScene,
+  ScrollBender,
+  AudioManager,
+  ClientLogoCycler,
+  AcceleratingGlobe,
+  FlickCards,
+  Navigation,
+  TextScrambler,
+  ServiceCards,
+  initDisposables,
+  initObserverHub,
+  initPageVisibility,
+  initBadgeRemover,
+  initPageTitleChanger,
+} from './Imports.js';
 
 // === CONFIGURATION & STATE ===
 
@@ -35,6 +44,25 @@ let virtualScrollY = window.scrollY;
 let lastRawScrollY = window.scrollY;
 
 // === INITIALIZATION ===
+
+initDisposables();
+initObserverHub();
+initBadgeRemover();
+initPageTitleChanger();
+
+// Initialize Lenis
+const lenis = new Lenis({
+  lerp: 0.1,
+  smoothWheel: true,
+  // wrapper: window, // default
+  // content: document.documentElement, // default
+});
+
+// Sync ScrollTrigger if you use it (boilerplate for future)
+// ScrollTrigger.update();
+// gsap.ticker.add((time)=>{ lenis.raf(time * 1000) });
+
+initPageVisibility(lenis);
 
 stats.showPanel(0);
 stats.dom.style.position = 'fixed';
@@ -97,6 +125,8 @@ function calcMountainConfig() {
   mountainConfig.bottom = mountainConfig.top + rect.height;
 }
 
+// We can replace this with observeWith now, but ResizeObserver is specialized.
+// Keeping strictly for simplicity unless we want to wrap ResizeObserver in Hub too.
 const mountainObserver = new ResizeObserver(() => {
   calcMountainConfig();
   // Force a render if needed, but the loop handles it.
@@ -116,6 +146,7 @@ function updateRouteState(namespace, container) {
       mountainScene.mount();
       // Start observing for size changes (handles transition/load timing)
       mountainObserver.observe(mountainEl);
+
       // Also call once immediately in case it's already stable
       calcMountainConfig();
 
@@ -148,7 +179,20 @@ function updateRouteState(namespace, container) {
 // === EVENTS ===
 
 function updateVirtualScroll() {
-  const raw = window.scrollY;
+  // WITH LENIS: We trust lenis for the scroll value
+  // NOTE: lenis.scroll gives the current smoothed scroll position
+  const raw = lenis.scroll;
+
+  // const delta = raw - lastRawScrollY;
+  // For 'ScrollBender', we might need the exact frame delta, or just feed it 'raw'
+  // But wait, existing logic accumulating `virtualScrollY` based on delta was for "infinite" or bending logic?
+  // Let's check:
+  // virtualScrollY += delta;
+  // Actually, standardizing on just "raw" might be safer if we fully trust Lenis.
+  // But `GrassScene` might rely on infinite accumulation?
+
+  // Let's stick to the previous pattern but fed by Lenis:
+
   const delta = raw - lastRawScrollY;
 
   if (!window.isNavigatingReset) {
@@ -159,35 +203,23 @@ function updateVirtualScroll() {
   currentScrollY = raw;
 }
 
-// window.addEventListener('scroll', () => {
-//    updateVirtualScroll();
-// }, { passive: true });
+// Ensure Lenis updates happen
+function onResize() {
+  if (Math.abs(window.innerWidth - lastWindowWidth) < 2) return;
+  lastWindowWidth = window.innerWidth;
 
-let resizeTimeout;
-window.addEventListener(
-  'resize',
-  () => {
-    if (Math.abs(window.innerWidth - lastWindowWidth) < 2) return;
-    lastWindowWidth = window.innerWidth;
+  const w = container.clientWidth;
+  const h = container.clientHeight;
 
-    // Clear debounce
-    if (resizeTimeout) clearTimeout(resizeTimeout);
+  renderer.setSize(w, h);
+  mountainScene.resize(w, h);
+  grassScene.resize(w, h);
+  scrollBender.resize();
 
-    resizeTimeout = setTimeout(() => {
-      const w = container.clientWidth;
-      const h = container.clientHeight;
-
-      renderer.setSize(w, h);
-      mountainScene.resize(w, h);
-      grassScene.resize(w, h);
-      scrollBender.resize();
-
-      // update cache
-      calcMountainConfig();
-    }, 100); // 100ms debounce
-  },
-  { passive: true }
-);
+  // update cache
+  calcMountainConfig();
+}
+window.addEventListener('resize', onResize, { passive: true });
 
 // === BARBA SETUP ===
 
@@ -230,10 +262,17 @@ if (barba) {
         leave(data) {
           // Lock Interaction
           document.body.classList.add('is-transitioning');
-          clientLogoCycler.destroy(); // Stop cycler
-          acceleratingGlobe.destroy(); // Stop globe animation
-          flickCards.destroy(); // Stop flick cards
-          serviceCards.destroy(); // Cleanup service cards
+
+          // === NEW DISPOSABLE SYSTEM ===
+          // Automatically clean up any registered listeners/observers
+          window.cleanupOnLeave();
+
+          // Still call specific component destroys if they are not yet using global disposables
+          clientLogoCycler.destroy();
+          acceleratingGlobe.destroy();
+          flickCards.destroy();
+          serviceCards.destroy();
+          // ...
 
           // Return a Promise to force Barba to wait
           return new Promise((resolve) => {
@@ -280,16 +319,21 @@ if (barba) {
         beforeEnter(data) {
           // Wrapper is already 0 from leave().
           // No action needed specifically for container.
+          // Re-init global systems if needed (Disposables are already cleared)
         },
         enter(data) {
           return new Promise((resolve) => {
             try {
-              // Reset Scroll
+              // Reset Scroll via Lenis
               window.isNavigatingReset = true;
               isTransitioning = true;
-              window.scrollTo(0, 0);
+
+              // window.scrollTo(0, 0); // Native
+              lenis.scrollTo(0, { immediate: true }); // Lenis
+
               lastRawScrollY = 0;
               currentScrollY = 0;
+
               requestAnimationFrame(() => {
                 window.isNavigatingReset = false;
               });
@@ -310,10 +354,6 @@ if (barba) {
                   data.current.container
                 );
               }
-
-              // Ensure Wrapper is 0 (it should be)
-              // Actually, if coming from external or refresh, CSS is 0.
-              // If coming from navigation, it's 0.
 
               // Add WebGL logic if global
               if (transitionGlobalFade) {
@@ -354,6 +394,7 @@ if (barba) {
           acceleratingGlobe.init(); // Re-init globe
           flickCards.init(); // Re-init flick cards
           serviceCards.init(); // Re-init service cards
+          textScrambler.init();
         },
       },
     ],
@@ -380,24 +421,30 @@ if (initialCanvasContainer) {
 const initialContainer = document.querySelector('[data-barba="container"]');
 const initialNs = initialContainer.dataset.namespace;
 updateRouteState(initialNs, initialContainer);
-clientLogoCycler.init(); // Initialize logo cycler
-acceleratingGlobe.init(); // Initialize globe animation
-flickCards.init(); // Initialize flick cards
-serviceCards.init(); // Initialize service cards
+
+// Init Components
+clientLogoCycler.init();
+acceleratingGlobe.init();
+flickCards.init();
+serviceCards.init();
+textScrambler.init();
 
 // === ANIMATION LOOP ===
 
-function animate() {
+function animate(time) {
+  // Use 'time' from RAF which is more precise
+  lenis.raf(time);
+
   stats.begin();
   requestAnimationFrame(animate);
 
-  const time = performance.now() * 0.001;
+  // const time = performance.now() * 0.001; // Existing logic uses seconds
+  const t = time * 0.001;
   const dt = clock.getDelta();
 
-  // Poll scroll directly for lowest latency sync
+  // Poll scroll directly (from Lenis now inside updateVirtualScroll)
   updateVirtualScroll();
 
-  // Default viewport for full screen
   // Default viewport for full screen
   renderer.setViewport(0, 0, container.clientWidth, container.clientHeight);
   renderer.setScissorTest(false);
@@ -453,7 +500,7 @@ function animate() {
   // 1. Mountain (Priority if visible)
   if (mountainVisible) {
     // Render Mountain ONLY
-    mountainScene.update(time, dt);
+    mountainScene.update(t, dt);
     mountainScene.render();
 
     // Push virtual scroll to grass even if not rendering, so it doesn't jump when it reappears
@@ -461,7 +508,7 @@ function animate() {
   } else {
     // 2. Grass (Fallback if Mountain not visible)
     grassScene.updateScrollState(virtualScrollY);
-    grassScene.update(time, dt);
+    grassScene.update(t, dt);
     grassScene.render();
   }
 
@@ -485,7 +532,7 @@ function animate() {
 }
 
 // Start the animation loop (or ensure it runs)
-animate();
+requestAnimationFrame(animate);
 
 // Initial Load Complete: Fade out the global loader
 // Initial Load Complete: Interactive entry
