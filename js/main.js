@@ -46,7 +46,8 @@ document.body.appendChild(stats.dom);
 // Toggle stats visibility on Shift+D
 document.addEventListener('keydown', (e) => {
   if (e.shiftKey && (e.key === 'D' || e.key === 'd')) {
-    stats.dom.style.display = stats.dom.style.display === 'none' ? 'block' : 'none';
+    stats.dom.style.display =
+      stats.dom.style.display === 'none' ? 'block' : 'none';
   }
 });
 
@@ -67,6 +68,7 @@ const clientLogoCycler = new ClientLogoCycler();
 const acceleratingGlobe = new AcceleratingGlobe();
 const flickCards = new FlickCards();
 const navigation = new Navigation();
+const serviceCards = new ServiceCards();
 const textScrambler = new TextScrambler();
 
 renderer.setSize(container.clientWidth, container.clientHeight);
@@ -230,6 +232,7 @@ if (barba) {
           clientLogoCycler.destroy(); // Stop cycler
           acceleratingGlobe.destroy(); // Stop globe animation
           flickCards.destroy(); // Stop flick cards
+          serviceCards.destroy(); // Cleanup service cards
 
           // Return a Promise to force Barba to wait
           return new Promise((resolve) => {
@@ -348,7 +351,9 @@ if (barba) {
           scrollBender.resize(); // Re-cache elements after new content loaded
           clientLogoCycler.init(); // Re-init cycler
           acceleratingGlobe.init(); // Re-init globe
+          acceleratingGlobe.init(); // Re-init globe
           flickCards.init(); // Re-init flick cards
+          serviceCards.init(); // Re-init service cards
         },
       },
     ],
@@ -377,7 +382,9 @@ const initialNs = initialContainer.dataset.namespace;
 updateRouteState(initialNs, initialContainer);
 clientLogoCycler.init(); // Initialize logo cycler
 acceleratingGlobe.init(); // Initialize globe animation
+acceleratingGlobe.init(); // Initialize globe animation
 flickCards.init(); // Initialize flick cards
+serviceCards.init(); // Initialize service cards
 
 // === ANIMATION LOOP ===
 

@@ -1,52 +1,122 @@
 <!DOCTYPE html>
 <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>About - Bunq Labs</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>About - Bunq Labs</title>
-  <link rel="stylesheet" href="styles.css" />
-</head>
-
-<body>
-  <div id="canvas-container">
-    <div id="webgl"></div>
-  </div>
-  <div id="webgl-gradient" class="gradient"></div>
-
-  <nav style="position: fixed; top: 20px; right: 20px; z-index: 1000;">
-    <a href="index.html" style="color: white; margin-right: 10px;">Home</a>
-    <a href="about.html" style="color: white;">About</a>
-    <a href="work.html" style="color: white;">Work</a>
-    <button id="audio-toggle"
-      style="background: none; border: 1px solid white; color: white; padding: 5px 10px; cursor: pointer; margin-left: 20px; font-family: monospace; opacity: 0.5;">SOUND
-      ON</button>
-  </nav>
-
-  <main data-barba="wrapper" class="main-wrapper">
-    <div data-barba="container" data-namespace="about" class="barba-container">
-
-      <div style="height: 100vh; display: flex; align-items: center; justify-content: center; position: relative;">
-        <h1 style="color: white; font-family: sans-serif; text-align: center;">About Page<br><small>Only Grass
-            Background</small></h1>
-      </div>
-      <div style="height: 100vh; display: flex; align-items: center; justify-content: center; position: relative;">
-        <h1 style="color: white; font-family: sans-serif; text-align: center;">About Page<br><small>Only Grass
-            Background</small></h1>
-      </div>
-      <div style="height: 100vh; display: flex; align-items: center; justify-content: center; position: relative;">
-        <h1 style="color: white; font-family: sans-serif; text-align: center;">About Page<br><small>Only Grass
-            Background</small></h1>
-      </div>
-
+  <body>
+    <div id="canvas-container">
+      <div id="webgl"></div>
     </div>
-  </main>
+    <div id="webgl-gradient" class="gradient"></div>
 
-  <div class="global-loader">
-    <h2>loader</h2>
-  </div>
+    <nav style="position: fixed; top: 20px; right: 20px; z-index: 1000">
+      <a href="index.html" style="color: white; margin-right: 10px">Home</a>
+      <a href="about.html" style="color: white">About</a>
+      <a href="work.html" style="color: white">Work</a>
+      <button
+        id="audio-toggle"
+        style="
+          background: none;
+          border: 1px solid white;
+          color: white;
+          padding: 5px 10px;
+          cursor: pointer;
+          margin-left: 20px;
+          font-family: monospace;
+          opacity: 0.5;
+        "
+      >
+        SOUND ON
+      </button>
+    </nav>
 
-  <script type="importmap">
+    <main data-barba="wrapper" class="main-wrapper">
+      <div
+        data-barba="container"
+        data-namespace="about"
+        class="barba-container"
+      >
+        <div
+          style="
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+          "
+        >
+          <h1 style="color: white; font-family: sans-serif; text-align: center">
+            About Page<br /><small>Only Grass Background</small>
+          </h1>
+        </div>
+        <div
+          style="
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+          "
+        >
+          <h1 style="color: white; font-family: sans-serif; text-align: center">
+            About Page<br /><small>Only Grass Background</small>
+          </h1>
+        </div>
+        <div
+          style="
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            flex-direction: column;
+            gap: 20px;
+          "
+        >
+          <h1 style="color: white; font-family: sans-serif; text-align: center">
+            About Services<br /><small>Flip Test</small>
+          </h1>
+          <div
+            class="card service-card"
+            style="
+              width: 300px;
+              height: 200px;
+              background: white;
+              color: black;
+              padding: 20px;
+              border-radius: 10px;
+              cursor: pointer;
+            "
+          >
+            <h2>About Service</h2>
+            <p>Click me to flip!</p>
+          </div>
+        </div>
+        <div
+          style="
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+          "
+        >
+          <h1 style="color: white; font-family: sans-serif; text-align: center">
+            About Page<br /><small>Only Grass Background</small>
+          </h1>
+        </div>
+      </div>
+    </main>
+
+    <div class="global-loader">
+      <h2>loader</h2>
+    </div>
+
+    <script type="importmap">
       {
         "imports": {
           "three": "https://unpkg.com/three@0.169.0/build/three.module.js",
@@ -54,8 +124,7 @@
         }
       }
     </script>
-  <script src="https://unpkg.com/@barba/core"></script>
-  <script type="module" src="./js/main.js"></script>
-</body>
-
+    <script src="https://unpkg.com/@barba/core"></script>
+    <script type="module" src="./js/main.js"></script>
+  </body>
 </html>
