@@ -107,7 +107,7 @@ export class TextScrambler {
     }
 
     handlePointerOver(e) {
-        const el = e.target.closest('.scramble-text');
+        const el = e.target.closest('.hover-scramble-text');
         if (!el) return;
         if (e.relatedTarget && el.contains(e.relatedTarget)) return;
 
@@ -115,7 +115,7 @@ export class TextScrambler {
     }
 
     handleFocusIn(e) {
-        const el = e.target.closest('.scramble-text');
+        const el = e.target.closest('.hover-scramble-text');
         if (!el) return;
         this.scrambleTo(el, el.__baseText || el.textContent.trim());
     }
