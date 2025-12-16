@@ -1,33 +1,28 @@
 export class ServiceCards {
   constructor() {
+    this.boundHandleClick = this.handleClick.bind(this);
+    this.isInitialized = false;
     this.init();
   }
 
   init() {
-    this.cards = document.querySelectorAll('.service-card');
-
-    this.cards.forEach((card) => {
-      // Remove old listener to prevent duplicates
-      if (card.dataset.bound) return;
-
-      card.dataset.bound = 'true';
-      card.addEventListener('click', this.handleClick);
-
-      // Remove GSAP perspective hacks if they existed,
-      // rely on CSS classes now.
-    });
+    if (this.isInitialized) return;
+    document.addEventListener('click', this.boundHandleClick);
+    this.isInitialized = true;
   }
 
-  handleClick = (e) => {
-    const card = e.currentTarget;
+  handleClick(e) {
+    const card = e.target.closest('.service-card');
+    if (!card) return;
+
+    // Prevent interference if there are interactive elements inside (unless we want them to trigger flip?)
+    // For now, any click on card flips it.
+
     card.classList.toggle('is-flipped');
-  };
+  }
 
   destroy() {
-    // Optional cleanup
-    this.cards.forEach((card) => {
-      card.removeEventListener('click', this.handleClick);
-      delete card.dataset.bound;
-    });
+    document.removeEventListener('click', this.boundHandleClick);
+    this.isInitialized = false;
   }
 }
