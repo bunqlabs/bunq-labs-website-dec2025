@@ -57,6 +57,10 @@ export class PerformanceMonitor {
     this.avgFrameTime = this.avgFrameTime * 0.95 + cpuTime * 0.05;
     this.avgInterval = this.avgInterval * 0.95 + interval * 0.05;
 
+    // Benchmark State
+    this.isBenchmarking = false;
+    this.benchmarkData = { frames: 0, totalTime: 0 };
+
     this.analyze();
   }
 
@@ -67,7 +71,35 @@ export class PerformanceMonitor {
     // For now, let's assume valid usage is via beginFrame/endFrame
   }
 
+  startBenchmark() {
+    console.log('[Performance] Starting Pre-flight Benchmark...');
+    this.isBenchmarking = true;
+    this.benchmarkData = { frames: 0, totalTime: 0 };
+    this.reset();
+  }
+
+  endBenchmark() {
+    this.isBenchmarking = false;
+    const avg = this.benchmarkData.totalTime / (this.benchmarkData.frames || 1);
+
+    console.log(`[Performance] Benchmark Result: ${avg.toFixed(1)}ms per frame`);
+
+    if (avg > 33.3) {
+      console.warn('[Performance] Benchmark Failed (Low FPS). Downgrading immediately.');
+      this.qm.adjustQuality(-1); // Force drop
+    }
+  }
+
   analyze() {
+    if (this.isBenchmarking) {
+      // Just accumulate, don't trigger reactive logic
+      this.benchmarkData.frames++;
+      this.benchmarkData.totalTime += this.avgInterval; // Use EMA or raw interval?
+      // actually endFrame() updates avgInterval. 
+      // Let's use avgInterval as it smooths out the very first bad frame.
+      return;
+    }
+
     if (this.cooldown > 0) {
       this.cooldown -= this.avgInterval; // Decrease by ms
       return;

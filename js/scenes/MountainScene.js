@@ -1,8 +1,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
-import { PerformanceMonitor } from '../utils/PerformanceMonitor.js';
-import { Config } from '../Config.js';
+import { Config } from '../config.js';
 import gsap from 'https://unpkg.com/gsap@3.12.5/index.js?module';
 
 export class MountainScene {

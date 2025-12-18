@@ -8,11 +8,13 @@ import Lenis from 'https://unpkg.com/lenis@1.1.18/dist/lenis.mjs';
 export { THREE, Stats, gsap, Lenis };
 
 // Utilities
-export { initDisposables } from './utils/DisposableManager.js';
-export { initObserverHub } from './utils/ObserverHub.js';
-export { initPageVisibility } from './utils/PageVisibility.js';
-export { initBadgeRemover } from './utils/BadgeRemover.js';
-export { initPageTitleChanger } from './utils/PageTitleChanger.js';
+export { initDisposables } from './utils/disposableManager.js';
+export { initObserverHub } from './utils/observerHub.js';
+export { initPageVisibility } from './utils/pageVisibility.js';
+export { initBadgeRemover } from './utils/badgeRemover.js';
+export { initPageTitleChanger } from './utils/pageTitleChanger.js';
+export { QualityManager } from './utils/QualityManager.js';
+export { PerformanceMonitor } from './utils/PerformanceMonitor.js';
 
 // Scenes
 export { MountainScene } from './scenes/MountainScene.js';

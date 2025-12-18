@@ -1,7 +1,6 @@
 import * as THREE from 'three';
-import { PerformanceMonitor } from '../utils/PerformanceMonitor.js';
 import { WindField } from '../components/WindField.js';
-import { Config } from '../Config.js';
+import { Config } from '../config.js';
 
 // === SHADERS ===
 
@@ -399,11 +398,9 @@ export class GrassScene {
   }
 
   update(time, dt) {
-    // 1. Scroll Smoothing (Critically important for matching DOM smoothness)
-    // Lerp factor 0.1 at 60fps ~ 15fps convergence. Adjust as needed.
-    // Framerate independent lerp: a = 1 - pow(decay, dt)
-    const smoothFactor = 1.0 - Math.pow(0.001, dt); // Tuned for quick but smooth follow
-    this.currentScrollY += (this.targetScrollY - this.currentScrollY) * smoothFactor;
+    // 1. Scroll Sync (Direct Lenis Value)
+    // We removed the manual lerp to prevent "double smoothing" lag.
+    this.currentScrollY = this.targetScrollY;
 
     // 2. Apply Scroll to Uniforms
     const aspect = window.innerWidth / window.innerHeight;

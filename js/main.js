@@ -19,10 +19,9 @@ import {
   initPageVisibility,
   initBadgeRemover,
   initPageTitleChanger,
-} from './Imports.js';
-
-import { QualityManager } from './utils/QualityManager.js';
-import { PerformanceMonitor } from './utils/PerformanceMonitor.js';
+  QualityManager,
+  PerformanceMonitor,
+} from './imports.js';
 
 // === CONFIGURATION & STATE ===
 
@@ -558,54 +557,60 @@ if (initialLoader && loaderBtn) {
   const video = mountainScene.video;
 
   function onReady() {
-    clearInterval(dotInterval);
-    loaderBtn.textContent = 'Click to Enter';
-    loaderBtn.classList.remove('is-secondary');
+    // 3. Pre-flight Benchmark (500ms dead time)
+    loaderBtn.textContent = 'Calibrating...';
+    perfMonitor.startBenchmark();
 
-    // Show Mute Option
-    if (loaderBtnMute) {
-      loaderBtnMute.style.display = 'block';
-    }
+    setTimeout(() => {
+      perfMonitor.endBenchmark();
 
-    // 3a. Main Interaction (With Audio)
-    loaderBtn.addEventListener(
-      'click',
-      () => {
-        // Unlock Audio Context
-        audioManager.unlock();
-        enterSite();
-      },
-      { once: true }
-    );
+      clearInterval(dotInterval);
+      loaderBtn.textContent = 'Click to Enter';
+      loaderBtn.classList.remove('is-secondary');
 
-    // 3b. Mute Interaction (Without Audio)
-    if (loaderBtnMute) {
-      loaderBtnMute.addEventListener(
+      // Show Mute Option
+      if (loaderBtnMute) {
+        loaderBtnMute.style.display = 'block';
+      }
+
+      // 3a. Main Interaction (With Audio)
+      loaderBtn.addEventListener(
         'click',
         () => {
-          // Do NOT unlock audio context
-          console.log('Entering without audio context');
-          audioManager.setMute(true); // Update UI to 'SOUND OFF'
+          // Unlock Audio Context
+          audioManager.unlock();
           enterSite();
         },
         { once: true }
       );
-    }
 
-    function enterSite() {
-      siteEntered = true;
-      // Trigger Animation
-      mountainScene.animateEntry();
+      // 3b. Mute Interaction (Without Audio)
+      if (loaderBtnMute) {
+        loaderBtnMute.addEventListener(
+          'click',
+          () => {
+            // Do NOT unlock audio context
+            console.log('Entering without audio context');
+            audioManager.setMute(true); // Update UI to 'SOUND OFF'
+            enterSite();
+          },
+          { once: true }
+        );
+      }
+    }, 500); // 500ms dead time for benchmark
+  }
 
-      // Animate Out Loader
+  function enterSite() {
+    siteEntered = true;
+    // Trigger Animation
+    mountainScene.animateEntry();
 
-      // Animate Out
-      gsap.to(initialLoader, {
-        opacity: 0,
-        pointerEvents: 'none',
-        duration: 0.5,
-      });
-    }
+    // Animate Out Loader
+    gsap.to(initialLoader, {
+      opacity: 0,
+      pointerEvents: 'none',
+      duration: 0.5,
+    });
   }
 
   if (video && video.readyState >= 3) {
