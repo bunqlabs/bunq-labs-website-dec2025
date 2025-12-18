@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { WindField } from '../components/WindField.js';
-import { Config } from '../config.js';
+import { Config } from '../settings.js';
 
 // === SHADERS ===
 

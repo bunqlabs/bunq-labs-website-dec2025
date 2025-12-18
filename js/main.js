@@ -21,7 +21,7 @@ import {
   initPageTitleChanger,
   QualityManager,
   PerformanceMonitor,
-} from './imports.js';
+} from './modules.js';
 
 // === CONFIGURATION & STATE ===
 

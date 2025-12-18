@@ -2,10 +2,13 @@
 import * as THREE from 'three';
 import Stats from 'three/addons/libs/stats.module.js';
 import gsap from 'https://unpkg.com/gsap@3.12.5/index.js?module';
+import ScrollTrigger from 'https://unpkg.com/gsap@3.12.5/ScrollTrigger.js?module';
 import Lenis from 'https://unpkg.com/lenis@1.1.18/dist/lenis.mjs';
 
+gsap.registerPlugin(ScrollTrigger);
+
 // Export External Libraries
-export { THREE, Stats, gsap, Lenis };
+export { THREE, Stats, gsap, ScrollTrigger, Lenis };
 
 // Utilities
 export { initDisposables } from './utils/disposableManager.js';
