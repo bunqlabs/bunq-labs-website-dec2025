@@ -8,9 +8,10 @@ import gsap from 'https://unpkg.com/gsap@3.12.5/index.js?module';
 export class MountainScene {
   // === LIFECYCLE ===
 
-  constructor(renderer) {
+  constructor(renderer, qualityManager) {
     console.log('[Mountain] Constructor called');
     this.renderer = renderer;
+    this.qm = qualityManager;
     this.scene = new THREE.Scene();
 
     // Create a root group for all scrolling content
@@ -35,9 +36,6 @@ export class MountainScene {
     this.pixelBuffer = new Uint8ClampedArray(4 * 4 * 4); // 4x4 RGBA
 
     // Performance State
-    this.perfMonitor = new PerformanceMonitor(
-      this.onPerformanceDrop.bind(this)
-    );
     this.currentScaleDPR = 1.0;
 
     this.initCamera();
@@ -51,9 +49,30 @@ export class MountainScene {
     this.initLoader();
     this.initSnow();
 
-    // Initial performance setup
-    this.updatePerformanceConfig(window.innerWidth, window.innerHeight);
+    // Subscribe
+    if (this.qm) {
+      this.qm.subscribe(this.onQualityChange.bind(this));
+    }
+
     console.log('[Mountain] init() completed');
+  }
+
+  onQualityChange(profile) {
+    // 1. Update DPR
+    this.targetDPR = profile.maxDPR;
+    this.applyDPR(profile.maxDPR);
+
+    // 2. Adjust Snow Count (Simulated via DrawRange)
+    if (this.snow && this.snow.geometry) {
+      // Scale snow count by quality tier roughly
+      let ratio = 1.0;
+      if (profile.tier === 'LOW') ratio = 0.5;
+      if (profile.tier === 'POTATO') ratio = 0.0;
+
+      const drawCount = Math.floor(this.snowCount * ratio);
+      this.snow.geometry.setDrawRange(0, drawCount);
+      this.snow.visible = drawCount > 0;
+    }
   }
 
   dispose() {
@@ -317,30 +336,7 @@ export class MountainScene {
   }
 
   updatePerformanceConfig(width, height) {
-    const aspect = width / height;
-    const isMobile = width < 768;
-
-    let maxDPR = 1.0;
-    if (isMobile) {
-      maxDPR = Config.Grass.mobileDPR;
-    }
-
-    // Standardized Base DPR logic
-    const minDPR = Config.Grass.minDPR || 0.5;
-    const baseDPR = Math.max(minDPR, Math.min(aspect, maxDPR));
-    let finalDPR = baseDPR * this.currentScaleDPR;
-
-    // Enforce absolute minimum even after performance scaling
-    finalDPR = Math.max(minDPR, finalDPR);
-
-    if (Math.abs(this.renderer.getPixelRatio() - finalDPR) > 0.05) {
-      console.log(
-        `[Mountain] Applying DPR. Mobile: ${isMobile}, ConfigMax: ${Config.Grass.mobileDPR
-        }, Calculated: ${finalDPR.toFixed(2)}`
-      );
-    }
-
-    this.applyDPR(finalDPR);
+    // Handled by QualityManager
   }
 
   applyDPR(targetDPR) {
@@ -350,19 +346,12 @@ export class MountainScene {
     }
   }
 
-  onPerformanceDrop(fps) {
-    this.currentScaleDPR *= 0.8;
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-    const aspect = width / height;
-    const baseDPR = Math.max(0.6, Math.min(aspect, 1.0));
-    this.applyDPR(baseDPR * this.currentScaleDPR);
-  }
+  // onPerformanceDrop removed (Legacy)
 
   resize(width, height) {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
-    this.updatePerformanceConfig(width, height);
+    // this.updatePerformanceConfig(width, height);
   }
 
   updateLightFromVideo(dt) {
@@ -431,8 +420,8 @@ export class MountainScene {
   }
 
   update(time, dt) {
-    this.perfMonitor.update(dt);
-    this.perfMonitor.update(dt);
+    // this.perfMonitor.update(dt);
+    // this.perfMonitor.update(dt);
     this.updateLightFromVideo(dt);
 
     this.updateSnow(time, dt);

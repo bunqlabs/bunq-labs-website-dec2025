@@ -91,27 +91,34 @@ const grassFragmentShader = `
 export class GrassScene {
   // === LIFECYCLE ===
 
-  constructor(renderer) {
+  constructor(renderer, qualityManager) {
     this.renderer = renderer;
-    this.scene = new THREE.Scene();
+    this.qm = qualityManager;
 
+    this.scene = new THREE.Scene();
     this.raycaster = new THREE.Raycaster();
     this.mouse = new THREE.Vector2();
     this.isHovering = false;
-    this.lastGroundPoint = null; // Will hold a Vector3
+    this.lastGroundPoint = null;
+
+    // Scroll Smoothing
+    this.targetScrollY = 0;
+    this.currentScrollY = 0;
     this.scrollOffsetNormZ = 0;
+
+    // Grass Data
     this.grassBasePositions = [];
 
-    // Pre-allocated temporaries for GC optimization
+    // Pre-allocated temporaries
     this.tempVec2 = new THREE.Vector2();
     this.tempVec3 = new THREE.Vector3();
     this.lastGroundPointVec = new THREE.Vector3();
 
-    // Performance State
-    this.perfMonitor = new PerformanceMonitor(
-      this.onPerformanceDrop.bind(this)
-    );
     this.currentScaleDPR = 1.0;
+
+    // Config values (set by QualityManager)
+    this.maxGrassCount = Config.Grass.maxGrassCount;
+    this.windResolution = 256;
 
     this.initCamera();
     this.init();
@@ -120,11 +127,55 @@ export class GrassScene {
   init() {
     this.initSystems();
     this.initGrass();
-
     this.updateGroundToViewport();
     this.layoutGrass();
 
-    this.updatePerformanceConfig(window.innerWidth, window.innerHeight);
+    // Subscribe to quality changes
+    if (this.qm) {
+      this.qm.subscribe(this.onQualityChange.bind(this));
+    }
+  }
+
+  onQualityChange(profile) {
+    console.log('[GrassScene] Quality update:', profile.tier);
+
+    // 1. Update Grass Count
+    if (this.grass) {
+      this.grass.count = Math.min(profile.grassCount, this.maxGrassCount);
+    }
+
+    // 2. Update Wind Resolution (Requires Re-init if changed)
+    if (this.windResolution !== profile.windResolution) {
+      this.windResolution = profile.windResolution;
+      this.reinitWind(profile.windResolution);
+    }
+
+    // 3. Update DPR
+    this.targetDPR = profile.maxDPR;
+    this.applyDPR(profile.maxDPR);
+
+    // 4. Toggle Shadows (if implemented)
+    // this.grass.castShadow = profile.shadows;
+  }
+
+  reinitWind(resolution) {
+    if (this.windField) {
+      this.windField.dispose();
+    }
+
+    const u = Config.Grass.uniforms;
+    this.windField = new WindField(this.renderer, resolution, {
+      decay: u.decay,
+      diffusion: u.diffusion,
+      advection: u.advection,
+      injectionRadius: u.injectionRadius,
+      injectionStrength: u.injectionStrength,
+      injectionStrengthMax: u.injectionStrengthMax,
+    });
+
+    if (this.uniforms) {
+      this.uniforms.windTex.value = this.windField.texture;
+    }
   }
 
   dispose() {
@@ -203,9 +254,8 @@ export class GrassScene {
       glowBoost: { value: u.glowBoost },
     };
 
-    const isMobile = window.innerWidth < 768;
-    // Use lower resolution for fluid sim on mobile
-    const simRes = isMobile ? 128 : 256;
+    // Use dynamic resolution from QualityManager
+    const simRes = this.windResolution;
 
     this.windField = new WindField(this.renderer, simRes, {
       decay: Config.Grass.uniforms.decay,
@@ -285,47 +335,8 @@ export class GrassScene {
   }
 
   updatePerformanceConfig(width, height) {
-    const aspect = width / height;
-    const isMobile = width < 768;
-    const max = isMobile
-      ? Config.Grass.mobileMaxGrassCount
-      : Config.Grass.maxGrassCount;
-
-    console.log(
-      `[Grasss Debug] Width: ${width}, isMobile: ${isMobile}, Max: ${max}, MobileMaxConfig: ${Config.Grass.mobileMaxGrassCount}`
-    );
-
-    // Dynamic reduce based on aspect
-    const rawCount = Math.floor(aspect * max);
-    const targetCount = Math.min(max, rawCount);
-
-    if (this.grass) {
-      this.grass.count = targetCount;
-    }
-
-    let maxDPR = 1.0;
-    if (isMobile) {
-      maxDPR = Config.Grass.mobileDPR;
-    }
-
-    // Standardized Base DPR logic: Clamp to [minDPR, maxDPR]
-    const minDPR = Config.Grass.minDPR || 0.5;
-    const baseDPR = Math.max(minDPR, Math.min(aspect, maxDPR));
-    let finalDPR = baseDPR * this.currentScaleDPR;
-
-    // Enforce absolute minimum even after performance scaling
-    finalDPR = Math.max(minDPR, finalDPR);
-
-    // Log only if changed significantly to avoid spam, or one-off
-    if (Math.abs(this.renderer.getPixelRatio() - finalDPR) > 0.05) {
-      console.log(
-        `[Grass] Applying DPR. Mobile: ${isMobile}, ConfigMax: ${
-          Config.Grass.mobileDPR
-        }, Calculated: ${finalDPR.toFixed(2)}`
-      );
-    }
-
-    this.applyDPR(finalDPR);
+    // Deprecated by QualityManager, but kept for resize updates if needed
+    // We just re-apply current quality DPR logic here if we were using dynamic scaling
   }
 
   applyDPR(targetDPR) {
@@ -351,7 +362,7 @@ export class GrassScene {
     this.camera.updateProjectionMatrix();
     this.updateGroundToViewport();
     this.layoutGrass();
-    this.updatePerformanceConfig(width, height);
+    // this.updatePerformanceConfig(width, height); // Deprecated
   }
 
   updateGroundToViewport() {
@@ -360,31 +371,9 @@ export class GrassScene {
     this.ground.scale.set(aspect, 1, 1);
   }
 
-  updateScrollState(currentY) {
-    const aspect = window.innerWidth / window.innerHeight;
-    // Clamp aspect influence for ultrawide fix (so it doesn't move too fast)
-    const effectiveAspect = Math.min(aspect, 1.5);
-
-    // Calculate scroll offset based on Normalized units
-    this.scrollOffsetNormZ =
-      currentY * Config.Grass.scrollNormPerPixel * effectiveAspect;
-
-    // Wrap value to [0,1] for looping
-    this.scrollOffsetNormZ = this.scrollOffsetNormZ % 1;
-
-    // OPTIMIZATION: Removed this.applyGrassPositions()
-    // We do NOT update 15k matrices on CPU per frame.
-    // The shader uses scrollOffsetNorm and scrollOffsetZ to do it cheaply.
-
-    const planeSize = Config.Grass.planeSize;
-    const extentZ = planeSize * this.ground.scale.z;
-
-    this.uniforms.scrollOffsetZ.value = this.scrollOffsetNormZ * extentZ;
-    this.uniforms.scrollOffsetNorm.value = this.scrollOffsetNormZ;
-    this.uniforms.planeExtent.value.set(
-      planeSize * this.ground.scale.x,
-      extentZ
-    );
+  updateScrollState(scrollY) {
+    // Just store target, we smooth in update()
+    this.targetScrollY = scrollY;
   }
 
   layoutGrass() {
@@ -410,11 +399,34 @@ export class GrassScene {
   }
 
   update(time, dt) {
+    // 1. Scroll Smoothing (Critically important for matching DOM smoothness)
+    // Lerp factor 0.1 at 60fps ~ 15fps convergence. Adjust as needed.
+    // Framerate independent lerp: a = 1 - pow(decay, dt)
+    const smoothFactor = 1.0 - Math.pow(0.001, dt); // Tuned for quick but smooth follow
+    this.currentScrollY += (this.targetScrollY - this.currentScrollY) * smoothFactor;
+
+    // 2. Apply Scroll to Uniforms
+    const aspect = window.innerWidth / window.innerHeight;
+    const effectiveAspect = Math.min(aspect, 1.5);
+
+    this.scrollOffsetNormZ = this.currentScrollY * Config.Grass.scrollNormPerPixel * effectiveAspect;
+    this.scrollOffsetNormZ = this.scrollOffsetNormZ % 1;
+
+    const planeSize = Config.Grass.planeSize;
+    const extentZ = planeSize * this.ground.scale.z;
+
+    this.uniforms.scrollOffsetZ.value = this.scrollOffsetNormZ * extentZ;
+    this.uniforms.scrollOffsetNorm.value = this.scrollOffsetNormZ;
+    this.uniforms.planeExtent.value.set(
+      planeSize * this.ground.scale.x,
+      extentZ
+    );
+
+    // 3. System Updates
     this.uniforms.time.value = time;
-    this.perfMonitor.update(dt);
+    // this.perfMonitor.update(dt); // Handled globally now
 
     let mouseUv = null;
-    // Reuse temp vector for direction
     this.tempVec2.set(0, 0);
     const dir = this.tempVec2;
 
@@ -424,28 +436,21 @@ export class GrassScene {
 
       if (hit.length > 0) {
         const p = hit[0].point;
-        const planeSize = Config.Grass.planeSize;
         const extentX = planeSize * this.ground.scale.x;
-        const extentZ = planeSize * this.ground.scale.z;
+        const extentZReal = planeSize * this.ground.scale.z; // Renovated var name to avoid conflict
 
         const u = Math.min(Math.max(p.x / extentX + 0.5, 0), 1);
-        const v = Math.min(Math.max(p.z / extentZ + 0.5, 0), 1);
+        const v = Math.min(Math.max(p.z / extentZReal + 0.5, 0), 1);
 
-        // Still creating one tiny object for API requirement, or we could change WindField API
-        // But let's at least avoid the direction creation
-        mouseUv = { x: u, y: v }; // Using raw object is cheaper than THREE.Vector2
+        mouseUv = { x: u, y: v };
 
         if (this.lastGroundPoint) {
           dir.set(p.x - this.lastGroundPoint.x, p.z - this.lastGroundPoint.z);
-
-          // CLAMP VELOCITY to avoid "big grass" Glitch
-          // Cap the displacement vector length
           const maxLen = Config.Grass.bladeHeight * Config.Grass.maxWindOffset;
           if (dir.length() > maxLen) {
             dir.setLength(maxLen);
           }
         } else {
-          // Reuse stored vector
           this.lastGroundPoint = this.lastGroundPointVec;
         }
         this.lastGroundPoint.copy(p);

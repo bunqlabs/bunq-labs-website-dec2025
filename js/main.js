@@ -21,6 +21,9 @@ import {
   initPageTitleChanger,
 } from './Imports.js';
 
+import { QualityManager } from './utils/QualityManager.js';
+import { PerformanceMonitor } from './utils/PerformanceMonitor.js';
+
 // === CONFIGURATION & STATE ===
 
 const barba = window.barba;
@@ -50,17 +53,15 @@ initObserverHub();
 initBadgeRemover();
 initPageTitleChanger();
 
+// Initialize Quality & Performance
+const qualityManager = new QualityManager();
+const perfMonitor = new PerformanceMonitor(qualityManager);
+
 // Initialize Lenis
 const lenis = new Lenis({
   lerp: 0.1,
   smoothWheel: true,
-  // wrapper: window, // default
-  // content: document.documentElement, // default
 });
-
-// Sync ScrollTrigger if you use it (boilerplate for future)
-// ScrollTrigger.update();
-// gsap.ticker.add((time)=>{ lenis.raf(time * 1000) });
 
 initPageVisibility(lenis);
 
@@ -89,8 +90,9 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.setScissorTest(false);
 container.appendChild(renderer.domElement);
 
-const mountainScene = new MountainScene(renderer);
-const grassScene = new GrassScene(renderer);
+// Pass QualityManager to scenes
+const mountainScene = new MountainScene(renderer, qualityManager);
+const grassScene = new GrassScene(renderer, qualityManager);
 const scrollBender = new ScrollBender();
 const audioManager = new AudioManager();
 const clientLogoCycler = new ClientLogoCycler();
@@ -432,6 +434,8 @@ textScrambler.init();
 // === ANIMATION LOOP ===
 
 function animate(time) {
+  perfMonitor.beginFrame();
+
   // Use 'time' from RAF which is more precise
   lenis.raf(time);
 
@@ -503,11 +507,12 @@ function animate(time) {
     mountainScene.update(t, dt);
     mountainScene.render();
 
-    // Push virtual scroll to grass even if not rendering, so it doesn't jump when it reappears
-    grassScene.updateScrollState(virtualScrollY);
+    // Push scroll to grass even if not rendering, so it doesn't jump
+    // Use smoothed currentScrollY from Lenis
+    grassScene.updateScrollState(currentScrollY);
   } else {
     // 2. Grass (Fallback if Mountain not visible)
-    grassScene.updateScrollState(virtualScrollY);
+    grassScene.updateScrollState(currentScrollY);
     grassScene.update(t, dt);
     grassScene.render();
   }
@@ -529,6 +534,7 @@ function animate(time) {
   }
 
   stats.end();
+  perfMonitor.endFrame();
 }
 
 // Start the animation loop (or ensure it runs)
