@@ -507,11 +507,11 @@ function animate(time) {
     mountainScene.render();
 
     // Push scroll to grass even if not rendering, so it doesn't jump
-    // Use smoothed currentScrollY from Lenis
-    grassScene.updateScrollState(currentScrollY);
+    // Use smoothed virtualScrollY from Lenis logic (continuous across pages)
+    grassScene.updateScrollState(virtualScrollY);
   } else {
     // 2. Grass (Fallback if Mountain not visible)
-    grassScene.updateScrollState(currentScrollY);
+    grassScene.updateScrollState(virtualScrollY);
     grassScene.update(t, dt);
     grassScene.render();
   }
@@ -551,7 +551,7 @@ if (initialLoader && loaderBtn) {
   const dotInterval = setInterval(() => {
     dots = (dots + 1) % 4; // 0, 1, 2, 3
     loaderBtn.textContent = 'Loading' + '.'.repeat(dots);
-  }, 500);
+  }, 1000);
 
   // 2. Wait for Video to be Ready (Real Load Event)
   const video = mountainScene.video;
