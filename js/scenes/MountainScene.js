@@ -113,36 +113,66 @@ export class MountainScene {
   }
 
   initBackground() {
-    const canvas = document.createElement('canvas');
-    canvas.width = 2;
-    canvas.height = 512;
-    const ctx = canvas.getContext('2d');
-    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    grad.addColorStop(0, '#000000');
-    grad.addColorStop(1, '#aaaaaa');
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    this.bgTexture = new THREE.CanvasTexture(canvas);
-    this.bgTexture.colorSpace = THREE.SRGBColorSpace;
-    this.bgTexture.minFilter = THREE.LinearFilter;
-    this.bgTexture.magFilter = THREE.LinearFilter;
-
     // Replace scene.background (fixed) with a regular Mesh (scrollable)
     // Adjust plane size/position to cover viewport at z=0 (approximately)
     // With FOV 40 and Camera Z 0.65, height at Z=0 is approx 0.47 units
     // We make it slightly larger to be safe.
-    const planeH = 2.0;
+    const planeH = 1.0;
     const planeW = planeH * (window.innerWidth / window.innerHeight);
+
+    // Dithered Gradient Shader
+    const vertexShader = `
+      varying vec2 vUv;
+      void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }
+    `;
+
+    const fragmentShader = `
+      varying vec2 vUv;
+      uniform vec3 colorA;
+      uniform vec3 colorB;
+      uniform float uFade;
+
+      // Simple pseudo-random noise function
+      float random(vec2 st) {
+        return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
+      }
+
+      void main() {
+        // Gradient
+        vec3 gradient = mix(colorB, colorA, vUv.y);
+        
+        // Dithering
+        float noise = random(gl_FragCoord.xy) * (1.0/255.0) - (0.5/255.0);
+        
+        // Apply fade and output
+        gl_FragColor = vec4((gradient + noise) * uFade, 1.0);
+      }
+    `;
+
+    // Colors
+    const colorBlack = new THREE.Color(0x000000);
+    const colorGrey = new THREE.Color(0xbbbbbb);
+
+    const material = new THREE.ShaderMaterial({
+      uniforms: {
+        colorA: { value: colorBlack }, // Top
+        colorB: { value: colorGrey },  // Bottom
+        uFade: { value: 0.0 }         // Start fully black (faded out)
+      },
+      vertexShader: vertexShader,
+      fragmentShader: fragmentShader,
+      depthWrite: false,
+      side: THREE.DoubleSide
+    });
 
     this.bgMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(planeW, planeH),
-      new THREE.MeshBasicMaterial({
-        map: this.bgTexture,
-        depthWrite: false,
-        side: THREE.DoubleSide,
-        color: 0x000000, // Start Black
-      })
+      material
     );
+
     // Push it slightly back so other objects are in front
     this.bgMesh.position.z = -0.5;
     this.contentGroup.add(this.bgMesh);
@@ -217,7 +247,7 @@ export class MountainScene {
 
     const mountainTex = texLoader.load(
       'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/textures/mountain_texture_optimised.webp',
-      () => {}
+      () => { }
     );
 
     mountainTex.colorSpace = THREE.LinearSRGBColorSpace;
@@ -305,8 +335,7 @@ export class MountainScene {
 
     if (Math.abs(this.renderer.getPixelRatio() - finalDPR) > 0.05) {
       console.log(
-        `[Mountain] Applying DPR. Mobile: ${isMobile}, ConfigMax: ${
-          Config.Grass.mobileDPR
+        `[Mountain] Applying DPR. Mobile: ${isMobile}, ConfigMax: ${Config.Grass.mobileDPR
         }, Calculated: ${finalDPR.toFixed(2)}`
       );
     }
@@ -419,7 +448,7 @@ export class MountainScene {
 
   playVideo() {
     if (this.video && this.video.paused && !document.hidden) {
-      this.video.play().catch(() => {});
+      this.video.play().catch(() => { });
     }
   }
 
@@ -476,11 +505,13 @@ export class MountainScene {
     // 2. Background Color Fade (Black -> White (modulates texture))
     // The texture has the gradient. Modulating with White shows texture as is.
     // Modulating with Black shows black.
-    if (this.bgMesh && this.bgMesh.material) {
-      gsap.to(this.bgMesh.material.color, {
-        r: 1,
-        g: 1,
-        b: 1,
+    // 2. Background Color Fade (Black -> Target Gradient)
+    // We typically want to start black.
+    // The shader now uses 'uFade' or we can just assume the shader implementation handles it.
+    // Let's add a uFade uniform to the material in initBackground for this purpose.
+    if (this.bgMesh && this.bgMesh.material && this.bgMesh.material.uniforms.uFade) {
+      gsap.to(this.bgMesh.material.uniforms.uFade, {
+        value: 1.0,
         duration: 3.0,
         ease: 'linear',
       });
