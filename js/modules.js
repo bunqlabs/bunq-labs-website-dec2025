@@ -5,17 +5,19 @@ import gsap from 'https://unpkg.com/gsap@3.12.5/index.js?module';
 import ScrollTrigger from 'https://unpkg.com/gsap@3.12.5/ScrollTrigger.js?module';
 import Lenis from 'https://unpkg.com/lenis@1.1.18/dist/lenis.mjs';
 
-gsap.registerPlugin(ScrollTrigger);
+// Expose to window for inline scripts
+window.gsap = gsap;
+window.ScrollTrigger = ScrollTrigger;
 
 // Export External Libraries
 export { THREE, Stats, gsap, ScrollTrigger, Lenis };
 
 // Utilities
-export { initDisposables } from './utils/disposableManager.js';
-export { initObserverHub } from './utils/observerHub.js';
-export { initPageVisibility } from './utils/pageVisibility.js';
-export { initBadgeRemover } from './utils/badgeRemover.js';
-export { initPageTitleChanger } from './utils/pageTitleChanger.js';
+export { initDisposables } from './utils/disposables.js';
+export { initObserverHub } from './utils/observers.js';
+export { initPageVisibility } from './utils/visibility.js';
+export { initBadgeRemover } from './utils/badge.js';
+export { initPageTitleChanger } from './utils/title.js';
 export { QualityManager } from './utils/QualityManager.js';
 export { PerformanceMonitor } from './utils/PerformanceMonitor.js';
 
