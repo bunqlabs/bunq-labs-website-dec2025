@@ -625,21 +625,42 @@ if (initialLoader && loaderBtn) {
     });
   }
 
-  if (video && video.readyState >= 3) {
-    // HAVE_FUTURE_DATA or higher
-    onReady();
-  } else if (video) {
-    video.addEventListener('canplaythrough', onReady, { once: true });
-    video.addEventListener(
-      'error',
-      () => {
-        console.error('Video load error');
-        onReady(); // Allow entry anyway to prevent lock
-      },
-      { once: true }
-    );
-  } else {
-    // Fallback if no video element
-    onReady();
+  function checkBuffer() {
+    if (!video) {
+        onReady(); // Fallback
+        return;
+    }
+
+    // 1. Initial State Check (HAVE_CURRENT_DATA or more)
+    if (video.readyState < 2) {
+        requestAnimationFrame(checkBuffer);
+        return;
+    }
+
+    // 2. Check Buffer Percentage
+    let percentLoaded = 0;
+    if (video.buffered.length > 0) {
+        // We assume the buffer relevant to playback is the one containing currentTime
+        // or just the last one if we are at start.
+        // Simple check: how much is buffered vs duration
+        // Note: buffered.end(i) gives time in seconds.
+        const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+        const duration = video.duration || 1; // Avoid divide by zero
+        percentLoaded = (bufferedEnd / duration) * 100;
+    }
+
+    // Update Loader Text for Feedback (Optional but helpful)
+    // loaderBtn.textContent = \`Loading \${Math.min(99, Math.floor(percentLoaded))}%\`;
+
+    // 3. Threshold Check
+    // Unlock if > 20% loaded OR if readyState is 4 (HAVE_ENOUGH_DATA - browser confidence)
+    if (percentLoaded > 20 || video.readyState === 4) {
+        onReady();
+    } else {
+        requestAnimationFrame(checkBuffer);
+    }
   }
+
+  // Start checking immediately (video is already created in MountainScene)
+  checkBuffer();
 }

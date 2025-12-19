@@ -236,6 +236,12 @@ export class MountainScene {
     this.video.preload = 'auto';
     this.video.preload = 'auto';
     // this.video.autoplay = true; // Manual control only
+    
+    // SAFETY: Ensure loop works even if browser feels quirky
+    this.video.addEventListener('ended', () => {
+        this.video.currentTime = 0;
+        this.video.play().catch(() => {});
+    });
 
     this.videoTexture = new THREE.VideoTexture(this.video);
     this.videoTexture.colorSpace = THREE.SRGBColorSpace;
