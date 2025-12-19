@@ -16,6 +16,9 @@ export class ScrollBender {
     const docScroll = window.scrollY || document.documentElement.scrollTop;
 
     els.forEach((el) => {
+      // Performance Hint
+      el.style.willChange = 'transform';
+
       const rect = el.getBoundingClientRect();
       // Store absolute top position
       const top = rect.top + docScroll;

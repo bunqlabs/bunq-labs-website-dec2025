@@ -2,39 +2,47 @@
 export const QualityProfiles = {
     ULTRA: {
         tier: 'ULTRA',
-        grassCount: 25000,
-        windResolution: 128,
+        grassCount: 24000,
+        windResolution: 32,
         bladeSegments: 1, // Keep 1 for now, 3D adds up fast
         maxDPR: 2.0,
         shadows: true,
-        postProcessing: true
+        postProcessing: false,
+        useDynamicLight: true,
+        enableGrass: true
     },
     HIGH: {
         tier: 'HIGH',
-        grassCount: 15000,
-        windResolution: 64, // Half res
+        grassCount: 12000,
+        windResolution: 32, // Half res
         bladeSegments: 1,
         maxDPR: 1.5,
         shadows: false,
-        postProcessing: true
+        postProcessing: false,
+        useDynamicLight: true,
+        enableGrass: true
     },
     MEDIUM: {
         tier: 'MEDIUM',
-        grassCount: 8000,
-        windResolution: 32,
+        grassCount: 6000,
+        windResolution: 16,
         bladeSegments: 1,
         maxDPR: 1.25,
         shadows: false,
-        postProcessing: false // Disable bloom etc
+        postProcessing: false, // Disable bloom etc
+        useDynamicLight: true,
+        enableGrass: true
     },
     LOW: {
         tier: 'LOW',
         grassCount: 3000,
-        windResolution: 16,
+        windResolution: 8,
         bladeSegments: 1,
         maxDPR: 1.0,
         shadows: false,
-        postProcessing: false
+        postProcessing: false,
+        useDynamicLight: false,
+        enableGrass: false
     },
     POTATO: {
         tier: 'POTATO',
@@ -43,7 +51,9 @@ export const QualityProfiles = {
         bladeSegments: 1,
         maxDPR: 0.8,
         shadows: false,
-        postProcessing: false
+        postProcessing: false,
+        useDynamicLight: false,
+        enableGrass: false
     }
 };
 
@@ -57,6 +67,10 @@ export class QualityManager {
 
         // Auto-detect start tier
         this.detectHardware();
+    }
+
+    get tier() {
+        return this.currentTier;
     }
 
     detectHardware() {

@@ -7,9 +7,9 @@ export const Config = {
     screenLightIntensity: 500,
     videoSampleResolution: { w: 4, h: 4 },
     lightUpdateSkipThreshold: 0.1, // Skip if frame time > 100ms
-    snowFallSpeed: 0.05,
-    snowSway: 0.0001,
-    snowWindX: 0.0,
+    snowFallSpeed: 0.1,
+    snowSway: 0.001,
+    snowWindX: 0.03,
     snowWindZ: 0.0,
   },
   Grass: {

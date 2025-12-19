@@ -19,6 +19,12 @@ body.is-transitioning {
   cursor: wait;
 }
 
+/* SCROLL OPTIMIZATION: Disable pointer events for performance */
+body.is-scrolling,
+body.is-scrolling * {
+  pointer-events: none !important;
+}
+
 #canvas-container {
   position: fixed;
   top: 0;
@@ -103,8 +109,7 @@ main {
 }
 
 .card {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  background: rgba(0, 0, 0, 1);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 20px;
   padding: 40px;

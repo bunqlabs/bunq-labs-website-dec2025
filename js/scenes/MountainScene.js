@@ -25,6 +25,16 @@ export class MountainScene {
     this.snowWindZ = Config.Mountain.snowWindZ || 0.0;
     this.lightUpdateFrame = 0;
 
+    // Snow Uniforms
+    this.snowUniforms = {
+      time: { value: 0 },
+      area: { value: new THREE.Vector3(this.snowArea.x, this.snowArea.y, this.snowArea.z) },
+      fallSpeed: { value: this.snowFallSpeed },
+      sway: { value: this.snowSway },
+      wind: { value: new THREE.Vector3(this.snowWindX, 0, this.snowWindZ) }
+    };
+
+
     this.mixer = null;
     this.snowSystem = null;
     this.video = null;
@@ -307,26 +317,81 @@ export class MountainScene {
     const snowGeo = new THREE.BufferGeometry();
     const snowPositions = new Float32Array(this.snowCount * 3);
     const snowSpeeds = new Float32Array(this.snowCount);
+    const snowOffsets = new Float32Array(this.snowCount); // Random offset for sway
 
     for (let i = 0; i < this.snowCount; i++) {
-      snowPositions[i * 3 + 0] = (Math.random() - 0.5) * this.snowArea.x;
-      snowPositions[i * 3 + 1] = Math.random() * this.snowArea.y;
-      snowPositions[i * 3 + 2] = (Math.random() - 0.5) * this.snowArea.z;
-      snowSpeeds[i] = 0.05 + Math.random() * 1;
+        snowPositions[i * 3 + 0] = (Math.random() - 0.5) * this.snowArea.x;
+        snowPositions[i * 3 + 1] = (Math.random() - 0.5) * this.snowArea.y; // Centered at 0
+        snowPositions[i * 3 + 2] = (Math.random() - 0.5) * this.snowArea.z;
+        snowSpeeds[i] = 0.5 + Math.random(); // Varied speed factor
+        snowOffsets[i] = Math.random() * 100;
     }
 
-    snowGeo.setAttribute(
-      'position',
-      new THREE.BufferAttribute(snowPositions, 3)
-    );
+    snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPositions, 3));
     snowGeo.setAttribute('aSpeed', new THREE.BufferAttribute(snowSpeeds, 1));
+    snowGeo.setAttribute('aOffset', new THREE.BufferAttribute(snowOffsets, 1));
 
-    const snowMat = new THREE.PointsMaterial({
-      color: 0xffffff,
-      size: 0.002,
+    // Custom Shader for GPU Animation
+    const snowMat = new THREE.ShaderMaterial({
+      uniforms: this.snowUniforms,
       transparent: true,
-      opacity: 0.4,
       depthWrite: false,
+      vertexShader: `
+        uniform float time;
+        uniform vec3 area;
+        uniform float fallSpeed;
+        uniform float sway;
+        uniform vec3 wind;
+        
+        attribute float aSpeed;
+        attribute float aOffset;
+        
+        void main() {
+          vec3 pos = position;
+          
+          // 1. Gravity (Push Down)
+          float yOffset = time * fallSpeed * aSpeed * 0.2; // 0.2 scaling to match previous feel
+          
+          // Wrap Y
+          // We want pos.y to go from -area.y/2 to area.y/2
+          float h = area.y;
+          float y = pos.y - yOffset;
+          y = mod(y + h * 0.5, h) - h * 0.5;
+          pos.y = y;
+
+          // 2. Sway (Sine wave based on time + offset)
+          float swayVal = sin(time * 0.5 + aOffset) * sway;
+          pos.x += swayVal + wind.x * time * 0.1;
+          pos.z += cos(time * 0.3 + aOffset) * sway + wind.z * time * 0.1;
+
+          // Wrap X/Z strictly to area? 
+          // previous CPU code clamped them. 
+          // For simplicity in shader, let's just let them drift or wrap them if needed.
+          // Wrapping X/Z creates "popping", clamping makes them pile up.
+          // Let's implement soft wrapping for X/Z if wind is strong, but for light sway it's fine.
+          // WITH WIND: needed.
+          
+          if (wind.x != 0.0) {
+             pos.x = mod(pos.x + area.x * 0.5, area.x) - area.x * 0.5;
+          }
+          if (wind.z != 0.0) {
+             pos.z = mod(pos.z + area.z * 0.5, area.z) - area.z * 0.5;
+          }
+
+          vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+          gl_PointSize = (1.0 * (1.0 / -mvPosition.z)); // Scale by distance
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        void main() {
+          // Simple circular particle
+          vec2 coord = gl_PointCoord - vec2(0.5);
+          if(length(coord) > 0.5) discard;
+          
+          gl_FragColor = vec4(1.0, 1.0, 1.0, 0.4); // White, 0.4 opacity
+        }
+      `
     });
 
     this.snow = new THREE.Points(snowGeo, snowMat);
@@ -356,34 +421,52 @@ export class MountainScene {
   updateLightFromVideo(dt) {
     if (!this.video || this.video.paused || !this.lightSamplerCtx) return;
 
+    // Dynamic Throttling: Check per-frame performance
+    // If lagging, skip light updates or increase interval
+    const profile = this.qm ? this.qm.getProfile() : null;
+
+    // Optimization: Low tiers just use static white light
+    if (profile && !profile.useDynamicLight) {
+        this.targetColor.setRGB(0.8, 0.8, 0.8);
+        const lerpFactor = 5 * dt;
+        this.screenLight.color.lerp(this.targetColor, lerpFactor);
+        return;
+    }
+
+    const interval = this.lightUpdateInterval;
+
     this.lastLightUpdate += dt;
-    if (this.lastLightUpdate > this.lightUpdateInterval) {
-      this.lastLightUpdate = 0;
+    if (this.lastLightUpdate < interval) return;
 
-      // Draw small 4d frame
-      this.lightSamplerCtx.drawImage(this.video, 0, 0, 4, 4);
-      const frame = this.lightSamplerCtx.getImageData(0, 0, 4, 4);
-      const data = frame.data;
+    // Perform Update
+    this.lastLightUpdate = 0;
 
-      let r = 0,
-        g = 0,
-        b = 0;
-      const len = data.length;
-      const pixelCount = len / 4;
+    // Draw small 4d frame
+    try {
+        this.lightSamplerCtx.drawImage(this.video, 0, 0, 4, 4);
+        const frame = this.lightSamplerCtx.getImageData(0, 0, 4, 4);
+        const data = frame.data;
 
-      for (let i = 0; i < len; i += 4) {
-        r += data[i];
-        g += data[i + 1];
-        b += data[i + 2];
-      }
+        let r = 0,
+            g = 0,
+            b = 0;
+        const len = data.length;
+        const pixelCount = len / 4;
 
-      // SRGB -> Linear approximation (roughly pow 2.2, but simplified here)
-      // Just normalize 0-1
-      this.targetColor.setRGB(
-        r / pixelCount / 255,
-        g / pixelCount / 255,
-        b / pixelCount / 255
-      );
+        for (let i = 0; i < len; i += 4) {
+            r += data[i];
+            g += data[i + 1];
+            b += data[i + 2];
+        }
+
+        // SRGB -> Linear approximation
+        this.targetColor.setRGB(
+            r / pixelCount / 255,
+            g / pixelCount / 255,
+            b / pixelCount / 255
+        );
+    } catch(e) {
+        // Cross-origin/not ready
     }
 
     // Smooth interpolation for every frame
@@ -392,30 +475,9 @@ export class MountainScene {
   }
 
   updateSnow(time, dt) {
-    if (!this.snowGeo) return;
-    const pos = this.snowGeo.getAttribute('position');
-    const spd = this.snowGeo.getAttribute('aSpeed');
-
-    for (let i = 0; i < this.snowCount; i++) {
-      let x =
-        pos.getX(i) +
-        Math.sin(i * 12.9898 + time * 0.5) * this.snowSway +
-        this.snowWindX * dt;
-      let y = pos.getY(i) - spd.getX(i) * dt * this.snowFallSpeed;
-      let z =
-        pos.getZ(i) +
-        Math.cos(i * 78.233 + time * 0.3) * this.snowSway +
-        this.snowWindZ * dt;
-
-      if (y < -this.snowArea.y * 0.5) y = this.snowArea.y * 0.5;
-      if (x < -this.snowArea.x * 0.5) x = -this.snowArea.x * 0.5;
-      if (x > this.snowArea.x * 0.5) x = this.snowArea.x * 0.5;
-      if (z < -this.snowArea.z * 0.5) z = -this.snowArea.z * 0.5;
-      if (z > this.snowArea.z * 0.5) z = this.snowArea.z * 0.5;
-
-      pos.setXYZ(i, x, y, z);
-    }
-    pos.needsUpdate = true;
+     if (this.snowUniforms) {
+       this.snowUniforms.time.value = time;
+     }
   }
 
   update(time, dt) {

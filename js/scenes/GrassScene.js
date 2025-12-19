@@ -138,6 +138,14 @@ export class GrassScene {
   onQualityChange(profile) {
     console.log('[GrassScene] Quality update:', profile.tier);
 
+    // 0. Enable/Disable
+    this.isEnabled = profile.enableGrass !== false; // Default to true if undefined
+    if (this.grass) {
+        this.grass.visible = this.isEnabled;
+    }
+
+    if (!this.isEnabled) return; // Skip other updates if disabled
+
     // 1. Update Grass Count
     if (this.grass) {
       this.grass.count = Math.min(profile.grassCount, this.maxGrassCount);

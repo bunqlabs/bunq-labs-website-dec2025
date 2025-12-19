@@ -64,6 +64,18 @@ const lenis = new Lenis({
 
 initPageVisibility(lenis);
 
+// --- SCROLL OPTIMIZATION ---
+let isScrollingTimer = null;
+lenis.on('scroll', () => {
+    document.body.classList.add('is-scrolling');
+    
+    if (isScrollingTimer) clearTimeout(isScrollingTimer);
+    
+    isScrollingTimer = setTimeout(() => {
+        document.body.classList.remove('is-scrolling');
+    }, 150); // Debounce: Remove class after stop
+});
+
 stats.showPanel(0);
 stats.dom.style.position = 'fixed';
 stats.dom.style.left = '8px';

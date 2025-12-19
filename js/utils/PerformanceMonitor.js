@@ -70,6 +70,11 @@ export class PerformanceMonitor {
   analyze(interval, cpuTime) {
     // Use raw interval for benchmarking to capture spikes accurately
     if (this.isBenchmarking) {
+      if (this.warmupFrames > 0) {
+        this.warmupFrames--;
+        return;
+      }
+      
       if (this.benchmarkData && this.benchmarkData.frameTimes) {
         this.benchmarkData.frameTimes.push(interval);
       }
@@ -134,6 +139,7 @@ export class PerformanceMonitor {
       frameTimes: [],
       startTime: performance.now()
     };
+    this.warmupFrames = 30; // Discard first 30 frames (approx 0.5s)
     this.reset();
   }
 
@@ -142,45 +148,75 @@ export class PerformanceMonitor {
     const data = this.benchmarkData.frameTimes;
     const sampleCount = data.length;
 
-    if (sampleCount < 5) {
-      console.warn('[Performance] Benchmark: Not enough samples, assuming OK.');
+    if (sampleCount < 10) {
+      console.warn('[Performance] Benchmark: Not enough samples (N=' + sampleCount + '), defaulting to MEDIUM.');
+      this.qm.setTier('MEDIUM');
       return;
     }
 
     // 1. Sort samples
     data.sort((a, b) => a - b);
 
-    // 2. Discard Warmup (First 20% of chronological frames, but since we sorted, 
-    //    we should have stored timestamps if we wanted strict chronological warmup.
-    //    However, simpler heuristic: invalid outliers usually appear as extremes.
-    //    Let's just use the Median (P50) which naturally ignores outliers.
-    
-    //    Wait, logic check: In analyze(), we push 'avgInterval'. 
-    //    During benchmark, we should push 'interval' raw to avoid EMA smoothing masking spikes.
-    
-    // 3. Calculate Median
+    // 2. Calculate Median (P50) and P1 (1% Lows - worst stutters)
+    // We use P50 for general smoothness, P95 (high frame time) to detect bad stutters
+    // Note: 'data' contains Intervals in ms. Higher is worse.
     const median = data[Math.floor(sampleCount * 0.5)];
-    const p90 = data[Math.floor(sampleCount * 0.9)]; // 90th percentile (worst case)
+    const p90 = data[Math.floor(sampleCount * 0.9)]; 
 
-    console.log(`[Performance] Benchmark Result (N=${sampleCount}): Median=${median.toFixed(1)}ms, P90=${p90.toFixed(1)}ms`);
+    // Convert Median Interval to FPS for easier logic
+    // 16.6ms = 60fps, 33.3ms = 30fps
+    const medianFPS = 1000 / median;
 
-    // 4. Hardware Heuristics
-    // If device has low logical cores, be more aggressive with downgrade
-    let threshold = 33.3; // Default 30 FPS floor
+    console.log(`[Performance] Result: Median=${median.toFixed(1)}ms (~${medianFPS.toFixed(0)} FPS), P90=${p90.toFixed(1)}ms`);
+
+    // 3. Hardware Caps
     const cores = navigator.hardwareConcurrency || 4;
+    let maxTier = 'ULTRA';
     
     if (cores < 4) {
-      console.log(`[Performance] Low core count (${cores}), tightening threshold.`);
-      threshold = 28.0; // Require closer to 35-40 FPS explicitly
+        console.log(`[Performance] Low core count (${cores}), capping at MEDIUM.`);
+        maxTier = 'MEDIUM';
+    } else if (cores < 8) {
+        // Optional: Cap at HIGH for mid-range (often 4-6 cores on mobile/mid-range laptops)
+        // But let's trust the benchmark for now, maybe just cap ULTRA
+        maxTier = 'HIGH';
     }
 
-    // Decision
-    // We care about P50 (typical experience). If typical is bad, downgrade.
-    // We also check P90: if P90 is terrible (>50ms), it's stuttery.
-    if (median > threshold || p90 > 55.0) {
-      console.warn('[Performance] Benchmark Failed. Downgrading immediately.');
-      this.qm.adjustQuality(-1);
+    // 4. Tier Selection (Direct Mapping)
+    let targetTier = 'HIGH';
+
+    if (medianFPS < 20) {
+        targetTier = 'POTATO';
+    } else if (medianFPS < 35) {
+        targetTier = 'LOW';
+    } else if (medianFPS < 50) {
+        // It's smooth-ish but not locked 60. Safe bet is Medium.
+        targetTier = 'MEDIUM';
+    } else {
+        // > 50 FPS (Solid 60 territory)
+        targetTier = 'HIGH'; // Default High, unless we want to try Ultra
     }
+
+    // Downgrade if P90 is terrible (severe stuttering despite okay average)
+    if (p90 > 60.0 && targetTier !== 'POTATO') { // > 60ms is < 16fps momentary
+        console.warn('[Performance] High P90 detected (stutter). Downgrading.');
+        const tiers = ['POTATO', 'LOW', 'MEDIUM', 'HIGH', 'ULTRA'];
+        const idx = tiers.indexOf(targetTier);
+        if (idx > 0) targetTier = tiers[idx - 1];
+    }
+
+    // 5. Apply Cap
+    const tiers = ['POTATO', 'LOW', 'MEDIUM', 'HIGH', 'ULTRA'];
+    const targetIdx = tiers.indexOf(targetTier);
+    const maxIdx = tiers.indexOf(maxTier);
+    
+    if (targetIdx > maxIdx) {
+        console.log(`[Performance] Capping ${targetTier} -> ${maxTier} due to hardware.`);
+        targetTier = maxTier;
+    }
+
+    console.log(`[Performance] Final Benchmark Tier: ${targetTier}`);
+    this.qm.setTier(targetTier);
   }
 
 }
