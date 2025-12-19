@@ -2,8 +2,8 @@
 export const QualityProfiles = {
     ULTRA: {
         tier: 'ULTRA',
-        grassCount: 40000,
-        windResolution: 512,
+        grassCount: 20000,
+        windResolution: 64,
         bladeSegments: 1,
         maxDPR: 2.0,
         shadows: true,
@@ -15,21 +15,21 @@ export const QualityProfiles = {
     },
     HIGH: {
         tier: 'HIGH',
-        grassCount: 25000,
-        windResolution: 256,
+        grassCount: 15000,
+        windResolution: 64,
         bladeSegments: 1,
         maxDPR: 1.5,
         shadows: false,
         postProcessing: false,
         useDynamicLight: true,
         enableGrass: true,
-        clumpSize: 8,
-        clumpSpread: 5.0
+        clumpSize: 5,
+        clumpSpread: 3.0
     },
     MEDIUM: {
         tier: 'MEDIUM',
-        grassCount: 15000,
-        windResolution: 128,
+        grassCount: 10000,
+        windResolution: 32,
         bladeSegments: 1,
         maxDPR: 1.0,
         shadows: false,
@@ -37,25 +37,25 @@ export const QualityProfiles = {
         useDynamicLight: true,
         enableGrass: true,
         clumpSize: 10,
-        clumpSpread: 8.0
+        clumpSpread: 5.0
     },
     LOW: {
         tier: 'LOW',
         grassCount: 5000,
-        windResolution: 64,
+        windResolution: 16,
         bladeSegments: 1,
         maxDPR: 0.8,
         shadows: false,
         postProcessing: false,
         useDynamicLight: false,
         enableGrass: false,
-        clumpSize: 12,
-        clumpSpread: 10.0
+        clumpSize: 15,
+        clumpSpread: 7.0
     },
     POTATO: {
         tier: 'POTATO',
         grassCount: 2000,
-        windResolution: 32,
+        windResolution: 16,
         bladeSegments: 1,
         maxDPR: 0.6,
         shadows: false,
