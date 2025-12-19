@@ -597,7 +597,7 @@ if (initialLoader && loaderBtn) {
           { once: true }
         );
       }
-    }, 500); // 500ms dead time for benchmark
+    }, 800); // 800ms dead time for benchmark
   }
 
   function enterSite() {

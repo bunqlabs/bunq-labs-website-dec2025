@@ -57,11 +57,7 @@ export class PerformanceMonitor {
     this.avgFrameTime = this.avgFrameTime * 0.95 + cpuTime * 0.05;
     this.avgInterval = this.avgInterval * 0.95 + interval * 0.05;
 
-    // Benchmark State
-    this.isBenchmarking = false;
-    this.benchmarkData = { frames: 0, totalTime: 0 };
-
-    this.analyze();
+    this.analyze(interval, cpuTime);
   }
 
   // Legacy support for simple update(dt) if needed, but we prefer explicit begin/end
@@ -71,32 +67,12 @@ export class PerformanceMonitor {
     // For now, let's assume valid usage is via beginFrame/endFrame
   }
 
-  startBenchmark() {
-    console.log('[Performance] Starting Pre-flight Benchmark...');
-    this.isBenchmarking = true;
-    this.benchmarkData = { frames: 0, totalTime: 0 };
-    this.reset();
-  }
-
-  endBenchmark() {
-    this.isBenchmarking = false;
-    const avg = this.benchmarkData.totalTime / (this.benchmarkData.frames || 1);
-
-    console.log(`[Performance] Benchmark Result: ${avg.toFixed(1)}ms per frame`);
-
-    if (avg > 33.3) {
-      console.warn('[Performance] Benchmark Failed (Low FPS). Downgrading immediately.');
-      this.qm.adjustQuality(-1); // Force drop
-    }
-  }
-
-  analyze() {
+  analyze(interval, cpuTime) {
+    // Use raw interval for benchmarking to capture spikes accurately
     if (this.isBenchmarking) {
-      // Just accumulate, don't trigger reactive logic
-      this.benchmarkData.frames++;
-      this.benchmarkData.totalTime += this.avgInterval; // Use EMA or raw interval?
-      // actually endFrame() updates avgInterval. 
-      // Let's use avgInterval as it smooths out the very first bad frame.
+      if (this.benchmarkData && this.benchmarkData.frameTimes) {
+        this.benchmarkData.frameTimes.push(interval);
+      }
       return;
     }
 
@@ -111,6 +87,7 @@ export class PerformanceMonitor {
 
     // 2. Is it GPU bound? 
     // If CPU time is low (e.g. 5ms) but Interval is high, GPU is the bottleneck.
+    // Use smoothed values for stability in reactive logic
     const isGPUBound = (this.avgInterval - this.avgFrameTime) > 8.0;
 
     if (isLagging) {
@@ -147,4 +124,63 @@ export class PerformanceMonitor {
       }
     }
   }
+
+  // === ROBUST BENCHMARKING ===
+
+  startBenchmark() {
+    console.log('[Performance] Starting Pre-flight Benchmark...');
+    this.isBenchmarking = true;
+    this.benchmarkData = { 
+      frameTimes: [],
+      startTime: performance.now()
+    };
+    this.reset();
+  }
+
+  endBenchmark() {
+    this.isBenchmarking = false;
+    const data = this.benchmarkData.frameTimes;
+    const sampleCount = data.length;
+
+    if (sampleCount < 5) {
+      console.warn('[Performance] Benchmark: Not enough samples, assuming OK.');
+      return;
+    }
+
+    // 1. Sort samples
+    data.sort((a, b) => a - b);
+
+    // 2. Discard Warmup (First 20% of chronological frames, but since we sorted, 
+    //    we should have stored timestamps if we wanted strict chronological warmup.
+    //    However, simpler heuristic: invalid outliers usually appear as extremes.
+    //    Let's just use the Median (P50) which naturally ignores outliers.
+    
+    //    Wait, logic check: In analyze(), we push 'avgInterval'. 
+    //    During benchmark, we should push 'interval' raw to avoid EMA smoothing masking spikes.
+    
+    // 3. Calculate Median
+    const median = data[Math.floor(sampleCount * 0.5)];
+    const p90 = data[Math.floor(sampleCount * 0.9)]; // 90th percentile (worst case)
+
+    console.log(`[Performance] Benchmark Result (N=${sampleCount}): Median=${median.toFixed(1)}ms, P90=${p90.toFixed(1)}ms`);
+
+    // 4. Hardware Heuristics
+    // If device has low logical cores, be more aggressive with downgrade
+    let threshold = 33.3; // Default 30 FPS floor
+    const cores = navigator.hardwareConcurrency || 4;
+    
+    if (cores < 4) {
+      console.log(`[Performance] Low core count (${cores}), tightening threshold.`);
+      threshold = 28.0; // Require closer to 35-40 FPS explicitly
+    }
+
+    // Decision
+    // We care about P50 (typical experience). If typical is bad, downgrade.
+    // We also check P90: if P90 is terrible (>50ms), it's stuttery.
+    if (median > threshold || p90 > 55.0) {
+      console.warn('[Performance] Benchmark Failed. Downgrading immediately.');
+      this.qm.adjustQuality(-1);
+    }
+  }
+
 }
