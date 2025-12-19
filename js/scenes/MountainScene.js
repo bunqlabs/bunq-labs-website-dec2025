@@ -93,6 +93,9 @@ export class MountainScene {
       this.video.pause();
       this.video.src = '';
       this.video.load();
+      if (this.video.parentNode) {
+          this.video.parentNode.removeChild(this.video);
+      }
     }
 
     if (this.screenMesh) {
@@ -242,6 +245,17 @@ export class MountainScene {
         this.video.currentTime = 0;
         this.video.play().catch(() => {});
     });
+
+    // PREVENTION: Attach to DOM to avoid background throttling
+    this.video.style.position = 'absolute';
+    this.video.style.top = '0';
+    this.video.style.left = '0';
+    this.video.style.width = '1px';
+    this.video.style.height = '1px';
+    this.video.style.opacity = '0';
+    this.video.style.pointerEvents = 'none';
+    this.video.style.zIndex = '-1000';
+    document.body.appendChild(this.video);
 
     this.videoTexture = new THREE.VideoTexture(this.video);
     this.videoTexture.colorSpace = THREE.SRGBColorSpace;

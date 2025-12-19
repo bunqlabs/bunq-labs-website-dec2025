@@ -24,7 +24,7 @@ export const QualityProfiles = {
         useDynamicLight: true,
         enableGrass: true,
         clumpSize: 5,
-        clumpSpread: 3.0
+        clumpSpread: 4.0
     },
     MEDIUM: {
         tier: 'MEDIUM',
