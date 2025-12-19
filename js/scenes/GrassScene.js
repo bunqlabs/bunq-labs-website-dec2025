@@ -96,7 +96,7 @@ const grassFragmentShader = `
     vec3 topColor = vec3(grayValue, grayValue, grayValue);
     vec3 baseColor = mix(bottomColor, topColor + 0.1, vHeight);
 
-    vec3 glowColor = vec3(0.5, 0.5, 0.5);
+    vec3 glowColor = vec3(0.6, 0.6, 0.6);
     vec3 color = baseColor + vGlow * glowColor;
 
     gl_FragColor = vec4(color, 1.0);
@@ -616,6 +616,9 @@ export class GrassScene {
   // === EVENTS ===
 
   onPointerMove = (e) => {
+    // Disable interaction on mobile/tablet (Portrait & Landscape)
+    if (window.innerWidth <= 1024) return;
+
     const t =
       (e.touches && e.touches[0]) ||
       (e.changedTouches && e.changedTouches[0]) ||
@@ -624,6 +627,9 @@ export class GrassScene {
   };
 
   onTouchMove = (e) => {
+    // Disable interaction on mobile/tablet
+    if (window.innerWidth <= 1024) return;
+
     const t = e.touches[0];
     if (t) {
       this.updateMousePosition(t.clientX, t.clientY);

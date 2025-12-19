@@ -2,7 +2,7 @@
 export const QualityProfiles = {
     ULTRA: {
         tier: 'ULTRA',
-        grassCount: 20000,
+        grassCount: 24000,
         windResolution: 64,
         bladeSegments: 1,
         maxDPR: 2.0,
@@ -15,7 +15,7 @@ export const QualityProfiles = {
     },
     HIGH: {
         tier: 'HIGH',
-        grassCount: 15000,
+        grassCount: 16384,
         windResolution: 64,
         bladeSegments: 1,
         maxDPR: 1.5,
@@ -28,7 +28,7 @@ export const QualityProfiles = {
     },
     MEDIUM: {
         tier: 'MEDIUM',
-        grassCount: 10000,
+        grassCount: 8196,
         windResolution: 32,
         bladeSegments: 1,
         maxDPR: 1.0,
@@ -41,7 +41,7 @@ export const QualityProfiles = {
     },
     LOW: {
         tier: 'LOW',
-        grassCount: 5000,
+        grassCount: 2048,
         windResolution: 16,
         bladeSegments: 1,
         maxDPR: 0.8,
@@ -54,7 +54,7 @@ export const QualityProfiles = {
     },
     POTATO: {
         tier: 'POTATO',
-        grassCount: 2000,
+        grassCount: 1024,
         windResolution: 16,
         bladeSegments: 1,
         maxDPR: 0.6,
