@@ -131,8 +131,13 @@ export class MountainScene {
   // === INITIALIZATION ===
 
   initCamera() {
+    const isMobile = window.innerWidth < 768;
+    const fov = isMobile
+      ? Config.Mountain.cameraFovMobile
+      : Config.Mountain.cameraFovDesktop;
+
     this.camera = new THREE.PerspectiveCamera(
-      40,
+      fov,
       window.innerWidth / window.innerHeight,
       0.01,
       2000
@@ -145,7 +150,9 @@ export class MountainScene {
     // Adjust plane size/position to cover viewport at z=0 (approximately)
     // With FOV 40 and Camera Z 0.65, height at Z=0 is approx 0.47 units
     // We make it slightly larger to be safe.
-    const planeH = 1.0;
+    
+    const isMobile = window.innerWidth < 768;
+    const planeH = isMobile ? Config.Mountain.bgPlaneHeightMobile : Config.Mountain.bgPlaneHeightDesktop;
     const planeW = planeH * (window.innerWidth / window.innerHeight);
 
     // Dithered Gradient Shader
@@ -196,10 +203,12 @@ export class MountainScene {
       side: THREE.DoubleSide
     });
 
+    // Use 1x1 geometry and scale it so we can easily resize it later
     this.bgMesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(planeW, planeH),
+      new THREE.PlaneGeometry(1, 1),
       material
     );
+    this.bgMesh.scale.set(planeW, planeH, 1);
 
     // Push it slightly back so other objects are in front
     this.bgMesh.position.z = -0.5;
@@ -238,24 +247,54 @@ export class MountainScene {
       toneMapped: false,
     });
 
-    this.screenLight = new THREE.RectAreaLight(
-      0x808080, // Static Grey Light
-      screenLightIntensity,
-      screenWidth,
-      screenHeight * 2
-    );
-    this.screenLight.rotation.y = Math.PI;
-    this.screenMesh.add(this.screenLight);
+    // --- GPU LIGHT SAMPLING SETUP (No CPU Readback) ---
 
-    // WEBGL LIGHT SAMPLING - OPTIMIZED
-    this.lightSamplerCanvas = document.createElement('canvas');
-    this.lightSamplerCanvas.width = 4;
-    this.lightSamplerCanvas.height = 4;
-    this.lightSamplerCtx = this.lightSamplerCanvas.getContext('2d', {
-      willReadFrequently: true,
+    // 1. Create a 1x1 RenderTarget for "Average Color"
+    this.avgColorRT = new THREE.WebGLRenderTarget(1, 1, {
+      format: THREE.RGBAFormat,
+      type: THREE.HalfFloatType, // High precision
+      minFilter: THREE.NearestFilter,
+      magFilter: THREE.NearestFilter,
+      generateMipmaps: false
     });
-    this.lastLightUpdate = 0;
-    this.lightUpdateInterval = 0.25; // 4 updates per second
+
+    // 2. Aux video sampling scene
+    this.lightCvtScene = new THREE.Scene();
+    this.lightCvtCamera = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, 0, 1);
+    
+    // 3. Simple Plane displaying the video
+    // This allows us to render just the video to the 1x1 RT
+    // We use a custom shader to sample multiple points for a better average
+    this.lightCvtMesh = new THREE.Mesh(
+        new THREE.PlaneGeometry(1, 1),
+        new THREE.ShaderMaterial({
+            uniforms: { map: { value: this.videoTexture } },
+            vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                    vUv = uv;
+                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+            `,
+            fragmentShader: `
+                uniform sampler2D map;
+                varying vec2 vUv;
+                void main() {
+                    vec4 color = vec4(0.0);
+                    // Sample 5x5 grid
+                    for(float x = 0.1; x < 1.0; x += 0.2) {
+                        for(float y = 0.1; y < 1.0; y += 0.2) {
+                            color += texture2D(map, vec2(x, y));
+                        }
+                    }
+                    gl_FragColor = color / 25.0;
+                }
+            `
+        })
+    );
+    this.lightCvtScene.add(this.lightCvtMesh);
+
+    this.lightUpdateInterval = 0.05; // 20 updates per second (very cheap now)
   }
 
   // === SCENE SETUP & UTILS ===
@@ -274,7 +313,7 @@ export class MountainScene {
     texLoader.setCrossOrigin('anonymous');
 
     const mountainTex = texLoader.load(
-      'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/textures/mountain_texture_optimised.webp',
+      'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/textures/mountain_texture_optimised_bw.webp',
       () => { }
     );
 
@@ -289,14 +328,43 @@ export class MountainScene {
           if (obj.isMesh) {
             obj.castShadow = false;
             obj.receiveShadow = false;
-            obj.material = new THREE.MeshStandardMaterial({
-              color: 0x222222,
-              roughness: 0.5,
-              metalness: 0.8,
-              metalnessMap: mountainTex,
-              bumpMap: mountainTex,
-              bumpScale: -1,
-              side: THREE.DoubleSide,
+            // GPU-Optimized Unlit Material
+            // Instead of expensive PBR, we just multiply the texture by the average video color.
+            obj.material = new THREE.ShaderMaterial({
+              uniforms: {
+                tDiffuse: { value: mountainTex },
+                tVideoAvg: { value: this.avgColorRT.texture },
+                uStrength: { value: 1.2 } // Brightness boost
+              },
+              vertexShader: `
+                varying vec2 vUv;
+                void main() {
+                  vUv = uv;
+                  gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+                }
+              `,
+              fragmentShader: `
+                uniform sampler2D tDiffuse;
+                uniform sampler2D tVideoAvg;
+                uniform float uStrength;
+                varying vec2 vUv;
+
+                void main() {
+                  // 1. Read Mountain Texture (Grayscale/Base)
+                  vec4 texColor = texture2D(tDiffuse, vUv);
+
+                  // 2. Read Average Video Color (1x1 Pixel)
+                  vec4 lightColor = texture2D(tVideoAvg, vec2(0.5));
+
+                  // 3. Multiply logic (tinting)
+                  // We add a small base floor to lightColor so it's never pitch black
+                  vec3 finalLight = lightColor.rgb + vec3(0.15); 
+                  
+                  // Combine
+                  gl_FragColor = vec4(texColor.rgb * finalLight * uStrength, 1.0);
+                }
+              `,
+              side: THREE.DoubleSide
             });
           }
         });
@@ -379,7 +447,7 @@ export class MountainScene {
           }
 
           vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
-          gl_PointSize = (1.0 * (1.0 / -mvPosition.z)); // Scale by distance
+          gl_PointSize = (1.5 * (1.0 / -mvPosition.z)); // Scale by distance
           gl_Position = projectionMatrix * mvPosition;
         }
       `,
@@ -413,65 +481,33 @@ export class MountainScene {
   // onPerformanceDrop removed (Legacy)
 
   resize(width, height) {
+    const isMobile = width < 768;
+    this.camera.fov = isMobile
+      ? Config.Mountain.cameraFovMobile
+      : Config.Mountain.cameraFovDesktop;
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
+
+    // Update Background Scale
+    if (this.bgMesh) {
+        const planeH = isMobile ? Config.Mountain.bgPlaneHeightMobile : Config.Mountain.bgPlaneHeightDesktop;
+        const planeW = planeH * (width / height);
+        this.bgMesh.scale.set(planeW, planeH, 1);
+    }
     // this.updatePerformanceConfig(width, height);
   }
 
   updateLightFromVideo(dt) {
-    if (!this.video || this.video.paused || !this.lightSamplerCtx) return;
+    if (!this.video || this.video.paused) return;
+    
+    // Render video to 1x1 texture (GPU Downsample)
+    // No CPU readback, no buffer transfer. Extremely fast.
+    const oldTarget = this.renderer.getRenderTarget();
+    this.renderer.setRenderTarget(this.avgColorRT);
+    this.renderer.render(this.lightCvtScene, this.lightCvtCamera);
+    this.renderer.setRenderTarget(oldTarget);
 
-    // Dynamic Throttling: Check per-frame performance
-    // If lagging, skip light updates or increase interval
-    const profile = this.qm ? this.qm.getProfile() : null;
-
-    // Optimization: Low tiers just use static white light
-    if (profile && !profile.useDynamicLight) {
-        this.targetColor.setRGB(0.8, 0.8, 0.8);
-        const lerpFactor = 5 * dt;
-        this.screenLight.color.lerp(this.targetColor, lerpFactor);
-        return;
-    }
-
-    const interval = this.lightUpdateInterval;
-
-    this.lastLightUpdate += dt;
-    if (this.lastLightUpdate < interval) return;
-
-    // Perform Update
-    this.lastLightUpdate = 0;
-
-    // Draw small 4d frame
-    try {
-        this.lightSamplerCtx.drawImage(this.video, 0, 0, 4, 4);
-        const frame = this.lightSamplerCtx.getImageData(0, 0, 4, 4);
-        const data = frame.data;
-
-        let r = 0,
-            g = 0,
-            b = 0;
-        const len = data.length;
-        const pixelCount = len / 4;
-
-        for (let i = 0; i < len; i += 4) {
-            r += data[i];
-            g += data[i + 1];
-            b += data[i + 2];
-        }
-
-        // SRGB -> Linear approximation
-        this.targetColor.setRGB(
-            r / pixelCount / 255,
-            g / pixelCount / 255,
-            b / pixelCount / 255
-        );
-    } catch(e) {
-        // Cross-origin/not ready
-    }
-
-    // Smooth interpolation for every frame
-    const lerpFactor = 5 * dt; // Adjust speed of color change
-    this.screenLight.color.lerp(this.targetColor, lerpFactor);
+    // That's it! The 'tVideoAvg' uniform in the shader now holds the current frame's average color.
   }
 
   updateSnow(time, dt) {

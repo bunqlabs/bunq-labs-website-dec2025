@@ -16,10 +16,22 @@ const grassVertexShader = `
   uniform float glowBoost;
   uniform float scrollOffsetZ;
   uniform float scrollOffsetNorm;
+  
+  // Clumping Uniforms
+  uniform float uClumpSpread;
+
   attribute float aRandomSeed;
+  attribute vec2 aBladeOffset; // Offset of this blade within the clump
+
   varying float vHeight;
   varying float vRandomSeed;
   varying float vGlow;
+
+  // Rotation Matrix function
+  mat2 rotate2d(float angle) {
+      return mat2(cos(angle), -sin(angle), sin(angle), cos(angle));
+  }
+
   void main() {
     vec3 basePos = instanceMatrix[3].xyz;
 
@@ -36,6 +48,12 @@ const grassVertexShader = `
     float windMag = length(wind);
 
     vec3 pos = position;
+    
+    // 1. Apply Clump Spread (xy offset)
+    // We apply this BEFORE bending so the blade stays rooted relative to its offset
+    pos.x += aBladeOffset.x * uClumpSpread;
+    pos.z += aBladeOffset.y * uClumpSpread;
+
     float heightFactor = pos.y;
     vHeight = heightFactor;
 
@@ -146,9 +164,42 @@ export class GrassScene {
 
     if (!this.isEnabled) return; // Skip other updates if disabled
 
-    // 1. Update Grass Count
-    if (this.grass) {
-      this.grass.count = Math.min(profile.grassCount, this.maxGrassCount);
+    // 1. Update Grass Count & Geometry (if Clump Size Changed)
+    // NOTE: Changing clump size requires rebuilding the geometry
+    const newClumpSize = profile.clumpSize || 10;
+    const needRebuild = this.currentClumpSize !== newClumpSize;
+    
+    // Store for next time
+    this.currentClumpSize = newClumpSize;
+
+    // Use profile spread directly
+    if (this.uniforms && this.uniforms.uClumpSpread) {
+        this.uniforms.uClumpSpread.value = profile.clumpSpread || 3.0;
+    }
+
+    if (needRebuild) {
+        console.log('[GrassScene] Clump Size changed to', newClumpSize, '- Rebuilding Geometry...');
+        // Clean up old mesh
+        if (this.grass) {
+            this.scene.remove(this.grass);
+            this.grass.geometry.dispose();
+            // Material can be reused usually, but let's be safe if shader defines change (they don't here)
+        }
+        // Re-run init
+        this.initGrass();
+        // CRITICAL: Must re-layout instances, otherwise they all stack at (0,0,0)
+        this.layoutGrass();
+    } else if (this.grass) {
+        // Just update count if geometry didn't change
+        const targetTotalBlades = Math.min(profile.grassCount, this.maxGrassCount);
+        const targetClumps = Math.floor(targetTotalBlades / this.currentClumpSize);
+        this.grass.count = targetClumps;
+    }
+
+    // 2. Update Wind Resolution (Requires Re-init if changed)
+    if (this.windResolution !== profile.windResolution) {
+      this.windResolution = profile.windResolution;
+      this.reinitWind(profile.windResolution);
     }
 
     // 2. Update Wind Resolution (Requires Re-init if changed)
@@ -259,6 +310,7 @@ export class GrassScene {
       windTex: { value: null },
       glowThreshold: { value: u.glowThreshold },
       glowBoost: { value: u.glowBoost },
+      uClumpSpread: { value: 0.5 }, // Default
     };
 
     // Use dynamic resolution from QualityManager
@@ -276,41 +328,127 @@ export class GrassScene {
   }
 
   initGrass() {
-    console.log('[Grass] initGrass() started');
+    // Default if not set yet (e.g. first init)
+    if (!this.currentClumpSize) this.currentClumpSize = 10;
+    
+    console.log('[Grass] initGrass() with Clumping started. Size:', this.currentClumpSize);
     const bladeWidth = Config.Grass.bladeWidth;
     const bladeHeight = Config.Grass.bladeHeight;
     const bladeSegments = Config.Grass.bladeSegments;
     const taperFactor = Config.Grass.taperFactor;
+    const clumpSize = this.currentClumpSize;
 
-    const isMobile = window.innerWidth < 768;
-    const max = isMobile
-      ? Config.Grass.mobileMaxGrassCount
-      : Config.Grass.maxGrassCount;
-    const grassCount = max;
-
-    console.log(
-      `[Grass Init] WindowWidth: ${window.innerWidth}, isMobile: ${isMobile}, ConfigMax: ${Config.Grass.mobileMaxGrassCount}, AppliedCount: ${grassCount}`
-    );
-
-    const grassGeometry = new THREE.PlaneGeometry(
+    // --- 1. Base Single Blade Geometry ---
+    const baseBladeGeo = new THREE.PlaneGeometry(
       bladeWidth,
       bladeHeight,
       1,
       bladeSegments
     );
-
-    const verts = grassGeometry.attributes.position.array;
+    // Taper
+    const verts = baseBladeGeo.attributes.position.array;
     for (let i = 0; i < verts.length; i += 3) {
       if (verts[i + 1] > bladeHeight / 2 - 0.001) {
         verts[i] *= taperFactor;
       }
     }
-    grassGeometry.attributes.position.needsUpdate = true;
-    grassGeometry.translate(0, bladeHeight / 2, 0);
+    baseBladeGeo.attributes.position.needsUpdate = true;
+    baseBladeGeo.translate(0, bladeHeight / 2, 0); // Pivot at bottom
 
-    const randomSeeds = new Float32Array(grassCount);
-    for (let i = 0; i < grassCount; i++) randomSeeds[i] = Math.random();
-    grassGeometry.setAttribute(
+    // --- 2. Create Merged Clump Geometry ---
+    const bladeGeometries = [];
+    
+    for (let i = 0; i < clumpSize; i++) {
+        // Clone base
+        const blade = baseBladeGeo.clone();
+        
+        // Random Rotation around Y (baked)
+        const rot = Math.random() * Math.PI * 2;
+        blade.rotateY(rot);
+        
+        // Blade Offset (stored in attribute)
+        // We generate a random offset in circle
+        const r = 0.5 * Math.sqrt(Math.random()); // Radius 0.5 approx
+        const theta = Math.random() * 2 * Math.PI;
+        const ox = r * Math.cos(theta);
+        const oz = r * Math.sin(theta);
+        
+        // Add attribute to this blade's geometry
+        const count = blade.attributes.position.count;
+        const offsets = new Float32Array(count * 2);
+        for(let k=0; k<count; k++) {
+            offsets[k*2+0] = ox;
+            offsets[k*2+1] = oz;
+        }
+        blade.setAttribute('aBladeOffset', new THREE.BufferAttribute(offsets, 2));
+
+        bladeGeometries.push(blade);
+    }
+    
+    // Merge all blades into one geometry
+    // Note: mergeBufferGeometries comes from 'three/addons/utils/BufferGeometryUtils.js'
+    // But since we are in vanilla JS modules without import map for utils often, 
+    // we can manual merge OR use the loop to construct a single geometry from scratch.
+    
+    // Manual merge is safer given our import setup:
+    const mergedGeo = new THREE.BufferGeometry();
+    // Calculate total counts
+    let totalVerts = 0;
+    let totalIndices = 0;
+    bladeGeometries.forEach(g => {
+        totalVerts += g.attributes.position.count;
+        totalIndices += g.index.count;
+    });
+
+    const mergedPos = new Float32Array(totalVerts * 3);
+    const mergedOffset = new Float32Array(totalVerts * 2);
+    const mergedUV = new Float32Array(totalVerts * 2);
+    const mergedIndex = new Uint16Array(totalIndices); // 16-bit sufficient? yes
+
+    let vOffset = 0;
+    let iOffset = 0;
+
+    bladeGeometries.forEach(g => {
+        const p = g.attributes.position.array;
+        const o = g.attributes.aBladeOffset.array;
+        const uv = g.attributes.uv.array;
+        const idx = g.index.array;
+        const count = g.attributes.position.count;
+
+        // Copy attributes
+        mergedPos.set(p, vOffset * 3);
+        mergedOffset.set(o, vOffset * 2);
+        mergedUV.set(uv, vOffset * 2);
+
+        // Copy indices (adjusted)
+        for(let j=0; j<idx.length; j++) {
+            mergedIndex[iOffset + j] = idx[j] + vOffset;
+        }
+
+        vOffset += count;
+        iOffset += idx.length;
+    });
+
+    mergedGeo.setAttribute('position', new THREE.BufferAttribute(mergedPos, 3));
+    mergedGeo.setAttribute('aBladeOffset', new THREE.BufferAttribute(mergedOffset, 2));
+    mergedGeo.setAttribute('uv', new THREE.BufferAttribute(mergedUV, 2));
+    mergedGeo.setIndex(new THREE.BufferAttribute(mergedIndex, 1));
+    mergedGeo.computeVertexNormals();
+
+    const isMobile = window.innerWidth < 768;
+    const maxTotalBlades = isMobile
+      ? Config.Grass.mobileMaxGrassCount
+      : Config.Grass.maxGrassCount;
+      
+    const maxClumpCount = Math.ceil(maxTotalBlades / clumpSize);
+    
+    console.log(
+      `[Grass Init] Clumping: Size=${clumpSize}, TotalBlades=${maxTotalBlades}, ClumpInstances=${maxClumpCount}`
+    );
+
+    const randomSeeds = new Float32Array(maxClumpCount);
+    for (let i = 0; i < maxClumpCount; i++) randomSeeds[i] = Math.random();
+    mergedGeo.setAttribute(
       'aRandomSeed',
       new THREE.InstancedBufferAttribute(randomSeeds, 1)
     );
@@ -323,15 +461,16 @@ export class GrassScene {
     });
 
     this.grass = new THREE.InstancedMesh(
-      grassGeometry,
+      mergedGeo,
       grassMaterial,
-      grassCount
+      maxClumpCount
     );
     this.grass.frustumCulled = false;
     this.scene.add(this.grass);
 
-    this.grassBasePositions = new Array(grassCount);
-    for (let i = 0; i < grassCount; i++) {
+    this.grassBasePositions = new Array(maxClumpCount);
+    for (let i = 0; i < maxClumpCount; i++) {
+        // Clumps are placed randomly
       this.grassBasePositions[i] = {
         x: Math.random() - 0.5,
         z: Math.random() - 0.5,

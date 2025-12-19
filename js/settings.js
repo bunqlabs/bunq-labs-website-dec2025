@@ -10,7 +10,11 @@ export const Config = {
     snowFallSpeed: 0.1,
     snowSway: 0.001,
     snowWindX: 0.03,
-    snowWindZ: 0.0,
+    snowWindZ: 0.1,
+    cameraFovDesktop: 25,
+    cameraFovMobile: 40,
+    bgPlaneHeightDesktop: 0.7,
+    bgPlaneHeightMobile: 1.0,
   },
   Grass: {
     planeSize: 30,

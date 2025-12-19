@@ -2,58 +2,68 @@
 export const QualityProfiles = {
     ULTRA: {
         tier: 'ULTRA',
-        grassCount: 24000,
-        windResolution: 32,
-        bladeSegments: 1, // Keep 1 for now, 3D adds up fast
+        grassCount: 40000,
+        windResolution: 512,
+        bladeSegments: 1,
         maxDPR: 2.0,
         shadows: true,
         postProcessing: false,
         useDynamicLight: true,
-        enableGrass: true
+        enableGrass: true,
+        clumpSize: 3,
+        clumpSpread: 2.0
     },
     HIGH: {
         tier: 'HIGH',
-        grassCount: 12000,
-        windResolution: 32, // Half res
+        grassCount: 25000,
+        windResolution: 256,
         bladeSegments: 1,
         maxDPR: 1.5,
         shadows: false,
         postProcessing: false,
         useDynamicLight: true,
-        enableGrass: true
+        enableGrass: true,
+        clumpSize: 8,
+        clumpSpread: 5.0
     },
     MEDIUM: {
         tier: 'MEDIUM',
-        grassCount: 6000,
-        windResolution: 16,
-        bladeSegments: 1,
-        maxDPR: 1.25,
-        shadows: false,
-        postProcessing: false, // Disable bloom etc
-        useDynamicLight: true,
-        enableGrass: true
-    },
-    LOW: {
-        tier: 'LOW',
-        grassCount: 3000,
-        windResolution: 8,
+        grassCount: 15000,
+        windResolution: 128,
         bladeSegments: 1,
         maxDPR: 1.0,
         shadows: false,
         postProcessing: false,
-        useDynamicLight: false,
-        enableGrass: false
+        useDynamicLight: true,
+        enableGrass: true,
+        clumpSize: 10,
+        clumpSpread: 8.0
     },
-    POTATO: {
-        tier: 'POTATO',
-        grassCount: 500,
-        windResolution: 8,
+    LOW: {
+        tier: 'LOW',
+        grassCount: 5000,
+        windResolution: 64,
         bladeSegments: 1,
         maxDPR: 0.8,
         shadows: false,
         postProcessing: false,
         useDynamicLight: false,
-        enableGrass: false
+        enableGrass: false,
+        clumpSize: 12,
+        clumpSpread: 10.0
+    },
+    POTATO: {
+        tier: 'POTATO',
+        grassCount: 2000,
+        windResolution: 32,
+        bladeSegments: 1,
+        maxDPR: 0.6,
+        shadows: false,
+        postProcessing: false,
+        useDynamicLight: false,
+        enableGrass: false,
+        clumpSize: 15,
+        clumpSpread: 12.0
     }
 };
 

@@ -58,7 +58,7 @@ const perfMonitor = new PerformanceMonitor(qualityManager);
 
 // Initialize Lenis
 const lenis = new Lenis({
-  lerp: 0.1,
+  lerp: 0.05,
   smoothWheel: true,
 });
 
