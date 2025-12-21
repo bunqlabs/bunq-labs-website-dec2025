@@ -65,16 +65,16 @@ const lenis = new Lenis({
 initPageVisibility(lenis);
 
 // --- SCROLL OPTIMIZATION ---
-let isScrollingTimer = null;
-lenis.on('scroll', () => {
-    document.body.classList.add('is-scrolling');
-    
-    if (isScrollingTimer) clearTimeout(isScrollingTimer);
-    
-    isScrollingTimer = setTimeout(() => {
-        document.body.classList.remove('is-scrolling');
-    }, 150); // Debounce: Remove class after stop
-});
+// let isScrollingTimer = null;
+// lenis.on('scroll', () => {
+//   document.body.classList.add('is-scrolling');
+
+//   if (isScrollingTimer) clearTimeout(isScrollingTimer);
+
+//   isScrollingTimer = setTimeout(() => {
+//     document.body.classList.remove('is-scrolling');
+//   }, 150); // Debounce: Remove class after stop
+// });
 
 stats.showPanel(0);
 stats.dom.style.position = 'fixed';
@@ -627,26 +627,26 @@ if (initialLoader && loaderBtn) {
 
   function checkBuffer() {
     if (!video) {
-        onReady(); // Fallback
-        return;
+      onReady(); // Fallback
+      return;
     }
 
     // 1. Initial State Check (HAVE_CURRENT_DATA or more)
     if (video.readyState < 2) {
-        requestAnimationFrame(checkBuffer);
-        return;
+      requestAnimationFrame(checkBuffer);
+      return;
     }
 
     // 2. Check Buffer Percentage
     let percentLoaded = 0;
     if (video.buffered.length > 0) {
-        // We assume the buffer relevant to playback is the one containing currentTime
-        // or just the last one if we are at start.
-        // Simple check: how much is buffered vs duration
-        // Note: buffered.end(i) gives time in seconds.
-        const bufferedEnd = video.buffered.end(video.buffered.length - 1);
-        const duration = video.duration || 1; // Avoid divide by zero
-        percentLoaded = (bufferedEnd / duration) * 100;
+      // We assume the buffer relevant to playback is the one containing currentTime
+      // or just the last one if we are at start.
+      // Simple check: how much is buffered vs duration
+      // Note: buffered.end(i) gives time in seconds.
+      const bufferedEnd = video.buffered.end(video.buffered.length - 1);
+      const duration = video.duration || 1; // Avoid divide by zero
+      percentLoaded = (bufferedEnd / duration) * 100;
     }
 
     // Update Loader Text for Feedback (Optional but helpful)
@@ -655,9 +655,9 @@ if (initialLoader && loaderBtn) {
     // 3. Threshold Check
     // Unlock if > 20% loaded OR if readyState is 4 (HAVE_ENOUGH_DATA - browser confidence)
     if (percentLoaded > 20 || video.readyState === 4) {
-        onReady();
+      onReady();
     } else {
-        requestAnimationFrame(checkBuffer);
+      requestAnimationFrame(checkBuffer);
     }
   }
 
