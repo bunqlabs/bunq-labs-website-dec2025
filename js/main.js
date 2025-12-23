@@ -21,6 +21,7 @@ import {
   initPageTitleChanger,
   QualityManager,
   PerformanceMonitor,
+  CaseStudyNavigation,
 } from './modules.js';
 
 // === CONFIGURATION & STATE ===
@@ -112,6 +113,7 @@ const flickCards = new FlickCards();
 const navigation = new Navigation();
 const serviceCards = new ServiceCards();
 const textScrambler = new TextScrambler();
+const caseStudyNavigation = new CaseStudyNavigation();
 
 renderer.setSize(container.clientWidth, container.clientHeight);
 mountainScene.resize(container.clientWidth, container.clientHeight);
@@ -285,6 +287,7 @@ if (barba) {
           acceleratingGlobe.destroy();
           flickCards.destroy();
           serviceCards.destroy();
+          caseStudyNavigation.destroy();
           // ...
 
           // Return a Promise to force Barba to wait
@@ -408,6 +411,7 @@ if (barba) {
           flickCards.init(); // Re-init flick cards
           serviceCards.init(); // Re-init service cards
           textScrambler.init();
+          caseStudyNavigation.init(lenis);
         },
       },
     ],
@@ -441,6 +445,7 @@ acceleratingGlobe.init();
 flickCards.init();
 serviceCards.init();
 textScrambler.init();
+caseStudyNavigation.init(lenis);
 
 // === ANIMATION LOOP ===
 

@@ -34,3 +34,4 @@ export { FlickCards } from './components/FlickCards.js';
 export { Navigation } from './components/Navigation.js';
 export { TextScrambler } from './components/TextScrambler.js';
 export { ServiceCards } from './components/ServiceCards.js';
+export { CaseStudyNavigation } from './components/CaseStudyNavigation.js';
