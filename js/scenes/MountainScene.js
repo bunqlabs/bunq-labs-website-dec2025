@@ -28,12 +28,17 @@ export class MountainScene {
     // Snow Uniforms
     this.snowUniforms = {
       time: { value: 0 },
-      area: { value: new THREE.Vector3(this.snowArea.x, this.snowArea.y, this.snowArea.z) },
+      area: {
+        value: new THREE.Vector3(
+          this.snowArea.x,
+          this.snowArea.y,
+          this.snowArea.z
+        ),
+      },
       fallSpeed: { value: this.snowFallSpeed },
       sway: { value: this.snowSway },
-      wind: { value: new THREE.Vector3(this.snowWindX, 0, this.snowWindZ) }
+      wind: { value: new THREE.Vector3(this.snowWindX, 0, this.snowWindZ) },
     };
-
 
     this.mixer = null;
     this.snowSystem = null;
@@ -94,7 +99,7 @@ export class MountainScene {
       this.video.src = '';
       this.video.load();
       if (this.video.parentNode) {
-          this.video.parentNode.removeChild(this.video);
+        this.video.parentNode.removeChild(this.video);
       }
     }
 
@@ -153,9 +158,11 @@ export class MountainScene {
     // Adjust plane size/position to cover viewport at z=0 (approximately)
     // With FOV 40 and Camera Z 0.65, height at Z=0 is approx 0.47 units
     // We make it slightly larger to be safe.
-    
+
     const isMobile = window.innerWidth < 768;
-    const planeH = isMobile ? Config.Mountain.bgPlaneHeightMobile : Config.Mountain.bgPlaneHeightDesktop;
+    const planeH = isMobile
+      ? Config.Mountain.bgPlaneHeightMobile
+      : Config.Mountain.bgPlaneHeightDesktop;
     const planeW = planeH * (window.innerWidth / window.innerHeight);
 
     // Dithered Gradient Shader
@@ -197,20 +204,17 @@ export class MountainScene {
     const material = new THREE.ShaderMaterial({
       uniforms: {
         colorA: { value: colorBlack }, // Top
-        colorB: { value: colorGrey },  // Bottom
-        uFade: { value: 0.0 }         // Start fully black (faded out)
+        colorB: { value: colorGrey }, // Bottom
+        uFade: { value: 0.0 }, // Start fully black (faded out)
       },
       vertexShader: vertexShader,
       fragmentShader: fragmentShader,
       depthWrite: false,
-      side: THREE.DoubleSide
+      side: THREE.DoubleSide,
     });
 
     // Use 1x1 geometry and scale it so we can easily resize it later
-    this.bgMesh = new THREE.Mesh(
-      new THREE.PlaneGeometry(1, 1),
-      material
-    );
+    this.bgMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), material);
     this.bgMesh.scale.set(planeW, planeH, 1);
 
     // Push it slightly back so other objects are in front
@@ -239,11 +243,11 @@ export class MountainScene {
     this.video.preload = 'auto';
     this.video.preload = 'auto';
     // this.video.autoplay = true; // Manual control only
-    
+
     // SAFETY: Ensure loop works even if browser feels quirky
     this.video.addEventListener('ended', () => {
-        this.video.currentTime = 0;
-        this.video.play().catch(() => {});
+      this.video.currentTime = 0;
+      this.video.play().catch(() => {});
     });
 
     // PREVENTION: Attach to DOM to avoid background throttling
@@ -275,28 +279,35 @@ export class MountainScene {
       type: THREE.HalfFloatType, // High precision
       minFilter: THREE.NearestFilter,
       magFilter: THREE.NearestFilter,
-      generateMipmaps: false
+      generateMipmaps: false,
     });
 
     // 2. Aux video sampling scene
     this.lightCvtScene = new THREE.Scene();
-    this.lightCvtCamera = new THREE.OrthographicCamera(-0.5, 0.5, 0.5, -0.5, 0, 1);
-    
+    this.lightCvtCamera = new THREE.OrthographicCamera(
+      -0.5,
+      0.5,
+      0.5,
+      -0.5,
+      0,
+      1
+    );
+
     // 3. Simple Plane displaying the video
     // This allows us to render just the video to the 1x1 RT
     // We use a custom shader to sample multiple points for a better average
     this.lightCvtMesh = new THREE.Mesh(
-        new THREE.PlaneGeometry(1, 1),
-        new THREE.ShaderMaterial({
-            uniforms: { map: { value: this.videoTexture } },
-            vertexShader: `
+      new THREE.PlaneGeometry(1, 1),
+      new THREE.ShaderMaterial({
+        uniforms: { map: { value: this.videoTexture } },
+        vertexShader: `
                 varying vec2 vUv;
                 void main() {
                     vUv = uv;
                     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
                 }
             `,
-            fragmentShader: `
+        fragmentShader: `
                 uniform sampler2D map;
                 varying vec2 vUv;
                 void main() {
@@ -309,8 +320,8 @@ export class MountainScene {
                     }
                     gl_FragColor = color / 25.0;
                 }
-            `
-        })
+            `,
+      })
     );
     this.lightCvtScene.add(this.lightCvtMesh);
 
@@ -333,8 +344,8 @@ export class MountainScene {
     texLoader.setCrossOrigin('anonymous');
 
     const mountainTex = texLoader.load(
-      'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/textures/mountain_texture_optimised_bw.webp',
-      () => { }
+      'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/textures/light_bake.webp.webp',
+      () => {}
     );
 
     mountainTex.colorSpace = THREE.LinearSRGBColorSpace;
@@ -354,7 +365,7 @@ export class MountainScene {
               uniforms: {
                 tDiffuse: { value: mountainTex },
                 tVideoAvg: { value: this.avgColorRT.texture },
-                uStrength: { value: 1.2 } // Brightness boost
+                uStrength: { value: 1.2 }, // Brightness boost
               },
               vertexShader: `
                 varying vec2 vUv;
@@ -384,7 +395,7 @@ export class MountainScene {
                   gl_FragColor = vec4(texColor.rgb * finalLight * uStrength, 1.0);
                 }
               `,
-              side: THREE.DoubleSide
+              side: THREE.DoubleSide,
             });
           }
         });
@@ -408,14 +419,17 @@ export class MountainScene {
     const snowOffsets = new Float32Array(this.snowCount); // Random offset for sway
 
     for (let i = 0; i < this.snowCount; i++) {
-        snowPositions[i * 3 + 0] = (Math.random() - 0.5) * this.snowArea.x;
-        snowPositions[i * 3 + 1] = (Math.random() - 0.5) * this.snowArea.y; // Centered at 0
-        snowPositions[i * 3 + 2] = (Math.random() - 0.5) * this.snowArea.z;
-        snowSpeeds[i] = 0.5 + Math.random(); // Varied speed factor
-        snowOffsets[i] = Math.random() * 100;
+      snowPositions[i * 3 + 0] = (Math.random() - 0.5) * this.snowArea.x;
+      snowPositions[i * 3 + 1] = (Math.random() - 0.5) * this.snowArea.y; // Centered at 0
+      snowPositions[i * 3 + 2] = (Math.random() - 0.5) * this.snowArea.z;
+      snowSpeeds[i] = 0.5 + Math.random(); // Varied speed factor
+      snowOffsets[i] = Math.random() * 100;
     }
 
-    snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPositions, 3));
+    snowGeo.setAttribute(
+      'position',
+      new THREE.BufferAttribute(snowPositions, 3)
+    );
     snowGeo.setAttribute('aSpeed', new THREE.BufferAttribute(snowSpeeds, 1));
     snowGeo.setAttribute('aOffset', new THREE.BufferAttribute(snowOffsets, 1));
 
@@ -479,7 +493,7 @@ export class MountainScene {
           
           gl_FragColor = vec4(1.0, 1.0, 1.0, 0.4); // White, 0.4 opacity
         }
-      `
+      `,
     });
 
     this.snow = new THREE.Points(snowGeo, snowMat);
@@ -510,16 +524,18 @@ export class MountainScene {
 
     // Update Background Scale
     if (this.bgMesh) {
-        const planeH = isMobile ? Config.Mountain.bgPlaneHeightMobile : Config.Mountain.bgPlaneHeightDesktop;
-        const planeW = planeH * (width / height);
-        this.bgMesh.scale.set(planeW, planeH, 1);
+      const planeH = isMobile
+        ? Config.Mountain.bgPlaneHeightMobile
+        : Config.Mountain.bgPlaneHeightDesktop;
+      const planeW = planeH * (width / height);
+      this.bgMesh.scale.set(planeW, planeH, 1);
     }
     // this.updatePerformanceConfig(width, height);
   }
 
   updateLightFromVideo(dt) {
     if (!this.video || this.video.paused) return;
-    
+
     // Render video to 1x1 texture (GPU Downsample)
     // No CPU readback, no buffer transfer. Extremely fast.
     const oldTarget = this.renderer.getRenderTarget();
@@ -531,9 +547,9 @@ export class MountainScene {
   }
 
   updateSnow(time, dt) {
-     if (this.snowUniforms) {
-       this.snowUniforms.time.value = time;
-     }
+    if (this.snowUniforms) {
+      this.snowUniforms.time.value = time;
+    }
   }
 
   update(time, dt) {
@@ -554,7 +570,7 @@ export class MountainScene {
 
   playVideo() {
     if (this.video && this.video.paused && !document.hidden) {
-      this.video.play().catch(() => { });
+      this.video.play().catch(() => {});
     }
   }
 
@@ -615,7 +631,11 @@ export class MountainScene {
     // We typically want to start black.
     // The shader now uses 'uFade' or we can just assume the shader implementation handles it.
     // Let's add a uFade uniform to the material in initBackground for this purpose.
-    if (this.bgMesh && this.bgMesh.material && this.bgMesh.material.uniforms.uFade) {
+    if (
+      this.bgMesh &&
+      this.bgMesh.material &&
+      this.bgMesh.material.uniforms.uFade
+    ) {
       gsap.to(this.bgMesh.material.uniforms.uFade, {
         value: 1.0,
         duration: 3.0,
