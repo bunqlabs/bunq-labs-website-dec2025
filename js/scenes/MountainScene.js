@@ -344,7 +344,7 @@ export class MountainScene {
     texLoader.setCrossOrigin('anonymous');
 
     const mountainTex = texLoader.load(
-      'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/textures/light_bake.webp.webp',
+      'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/textures/light_bake.webp',
       () => {}
     );
 
