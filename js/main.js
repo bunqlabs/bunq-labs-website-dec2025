@@ -174,7 +174,7 @@ function updateRouteState(namespace, container) {
     // DO NOT mount grass if we are on home and mountain is covering everything
     // But since mountain scrolls, we might need grass later.
     // For now, let's keep grass mounted but control RENDER loop strictly.
-    grassScene.mount();
+    grassScene.mount(); // DEBUG: Disabled to test video stutter isolation
   } else {
     isHome = false;
 
@@ -504,14 +504,6 @@ function animate(time) {
       mountainScene.pauseVideo();
     }
     lastMountainVisible = mountainVisible;
-  } else if (
-    mountainVisible &&
-    siteEntered &&
-    mountainScene.video &&
-    mountainScene.video.paused
-  ) {
-    // Ensure it plays if visible and entered (fix for "stops after a while" or initial load race)
-    mountainScene.playVideo();
   }
 
   // RENDER ORDER & EXCLUSIVITY:
@@ -644,22 +636,46 @@ if (initialLoader && loaderBtn) {
 
     // 2. Check Buffer Percentage
     let percentLoaded = 0;
-    if (video.buffered.length > 0) {
-      // We assume the buffer relevant to playback is the one containing currentTime
-      // or just the last one if we are at start.
-      // Simple check: how much is buffered vs duration
-      // Note: buffered.end(i) gives time in seconds.
-      const bufferedEnd = video.buffered.end(video.buffered.length - 1);
-      const duration = video.duration || 1; // Avoid divide by zero
-      percentLoaded = (bufferedEnd / duration) * 100;
-    }
+    // CRITICAL FIX: Summing ranges hides gaps!
+    // Ensure we have a CONTINUOUS block of data from the current time.
+    const ct = video.currentTime;
+    const duration = video.duration || 1;
 
+    for (let i = 0; i < video.buffered.length; i++) {
+      const start = video.buffered.start(i);
+      const end = video.buffered.end(i);
+
+      // Find the range that covers our current playback position
+      if (ct >= start && ct <= end) {
+        // How much is loaded AHEAD of us in this specific contiguous block?
+        const loadedSeconds = end - ct;
+        percentLoaded = (loadedSeconds / duration) * 100;
+
+        // DEBUG: Log gaps if we are stuck
+        if (video.buffered.length > 1) {
+          console.warn(
+            `[Video Loader] Fragmentation detected! ${video.buffered.length} ranges.`
+          );
+        }
+        break; // Found our range, stop searching
+      }
+    }
     // Update Loader Text for Feedback (Optional but helpful)
     // loaderBtn.textContent = \`Loading \${Math.min(99, Math.floor(percentLoaded))}%\`;
 
     // 3. Threshold Check
-    // Unlock if > 20% loaded OR if readyState is 4 (HAVE_ENOUGH_DATA - browser confidence)
-    if (percentLoaded > 20 || video.readyState === 4) {
+    // STRICT: User requested 100% (wait for full download).
+    if (Math.floor(percentLoaded) > (checkBuffer.lastLogged || 0) + 10) {
+      console.log(`[Video Loader] Buffered: ${Math.floor(percentLoaded)}%`);
+      checkBuffer.lastLogged = Math.floor(percentLoaded);
+    }
+
+    if (percentLoaded > 99) {
+      console.log(
+        `[Video Loader] Ready triggered by: Buffer 100% (${Math.floor(
+          percentLoaded
+        )}%)`
+      );
       onReady();
     } else {
       requestAnimationFrame(checkBuffer);

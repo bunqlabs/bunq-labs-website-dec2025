@@ -46,8 +46,9 @@ export class MountainScene {
 
     // Persistent color object (GC Fix)
     this.tempColor = new THREE.Color();
-    this.targetColor = new THREE.Color();
-    this.pixelBuffer = new Uint8ClampedArray(4 * 4 * 4); // 4x4 RGBA
+    this.targetColor = new THREE.Color(0, 0, 0); // Target from video
+    this.currentColor = new THREE.Color(0, 0, 0); // Smoothed current color
+    this.pixelBuffer = new Uint8ClampedArray(4); // 1x1 RGBA (4 bytes)
 
     // Performance State
     this.currentScaleDPR = 1.0;
@@ -122,7 +123,7 @@ export class MountainScene {
     window.addEventListener('click', this.resumeVideo, { once: true });
     window.addEventListener('touchstart', this.resumeVideo, { once: true });
     document.addEventListener('visibilitychange', this.handleVisibilityChange);
-    this.playVideo();
+    // this.playVideo(); // REMOVED: Managed by main.js/enterSite
   }
 
   unmount() {
@@ -235,13 +236,12 @@ export class MountainScene {
 
     this.video = document.createElement('video');
     this.video.crossOrigin = 'anonymous';
-    this.video.src =
-      'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/video/showreel_optimised.mp4';
+    this.video.src = `https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/video/showreel_optimised.mp4?t=${Date.now()}`;
     this.video.muted = true;
     this.video.loop = true;
     this.video.playsInline = true;
     this.video.preload = 'auto';
-    this.video.preload = 'auto';
+
     // this.video.autoplay = true; // Manual control only
 
     // SAFETY: Ensure loop works even if browser feels quirky
@@ -249,6 +249,27 @@ export class MountainScene {
       this.video.currentTime = 0;
       this.video.play().catch(() => {});
     });
+
+    // DEBUG: Monitor Video State
+    const logVideo = (msg) =>
+      console.log(`[Video State] ${msg}`, {
+        readyState: this.video.readyState,
+        paused: this.video.paused,
+        buffered:
+          this.video.buffered.length > 0
+            ? this.video.buffered.end(this.video.buffered.length - 1)
+            : 0,
+        currentTime: this.video.currentTime,
+      });
+    this.video.addEventListener('waiting', () =>
+      logVideo('Waiting (Buffering?)')
+    );
+    this.video.addEventListener('stalled', () => logVideo('Stalled'));
+    this.video.addEventListener('playing', () => logVideo('Playing'));
+    this.video.addEventListener('pause', () => logVideo('Paused'));
+    this.video.addEventListener('canplaythrough', () =>
+      logVideo('Can Play Through')
+    );
 
     // PREVENTION: Attach to DOM to avoid background throttling
     this.video.style.position = 'absolute';
@@ -276,7 +297,7 @@ export class MountainScene {
     // 1. Create a 1x1 RenderTarget for "Average Color"
     this.avgColorRT = new THREE.WebGLRenderTarget(1, 1, {
       format: THREE.RGBAFormat,
-      type: THREE.HalfFloatType, // High precision
+      type: THREE.UnsignedByteType, // Fix: HalfFloat causes readPixels mismatch
       minFilter: THREE.NearestFilter,
       magFilter: THREE.NearestFilter,
       generateMipmaps: false,
@@ -325,7 +346,10 @@ export class MountainScene {
     );
     this.lightCvtScene.add(this.lightCvtMesh);
 
-    this.lightUpdateInterval = 0.05; // 20 updates per second (very cheap now)
+    this.lightCvtScene.add(this.lightCvtMesh);
+
+    this.lightUpdateInterval = 0.2; // 5Hz (every 200ms)
+    this.lightUpdateTimer = 0;
   }
 
   // === SCENE SETUP & UTILS ===
@@ -340,6 +364,13 @@ export class MountainScene {
     );
     loader.setDRACOLoader(dracoLoader);
 
+    // Shared Uniforms object for all mountain meshes to allow single-update control
+    this.mountainUniforms = {
+      tDiffuse: { value: null }, // Will set per texture if needed, but here we load one texture.
+      uLightColor: { value: this.currentColor }, // Shared Reference
+      uStrength: { value: 1.2 },
+    };
+
     const texLoader = new THREE.TextureLoader();
     texLoader.setCrossOrigin('anonymous');
 
@@ -350,6 +381,9 @@ export class MountainScene {
 
     mountainTex.colorSpace = THREE.LinearSRGBColorSpace;
     mountainTex.flipY = false;
+
+    // Update the shared uniform value
+    this.mountainUniforms.tDiffuse.value = mountainTex;
 
     loader.load(
       'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/models/mountain_export_optimised.glb',
@@ -362,11 +396,7 @@ export class MountainScene {
             // GPU-Optimized Unlit Material
             // Instead of expensive PBR, we just multiply the texture by the average video color.
             obj.material = new THREE.ShaderMaterial({
-              uniforms: {
-                tDiffuse: { value: mountainTex },
-                tVideoAvg: { value: this.avgColorRT.texture },
-                uStrength: { value: 1.2 }, // Brightness boost
-              },
+              uniforms: this.mountainUniforms, // Use Shared
               vertexShader: `
                 varying vec2 vUv;
                 void main() {
@@ -376,7 +406,7 @@ export class MountainScene {
               `,
               fragmentShader: `
                 uniform sampler2D tDiffuse;
-                uniform sampler2D tVideoAvg;
+                uniform vec3 uLightColor; // Smoothed CPU color
                 uniform float uStrength;
                 varying vec2 vUv;
 
@@ -384,12 +414,9 @@ export class MountainScene {
                   // 1. Read Mountain Texture (Grayscale/Base)
                   vec4 texColor = texture2D(tDiffuse, vUv);
 
-                  // 2. Read Average Video Color (1x1 Pixel)
-                  vec4 lightColor = texture2D(tVideoAvg, vec2(0.5));
-
-                  // 3. Multiply logic (tinting)
+                  // 2. Use Smoothed Light Color from Uniform
                   // We add a small base floor to lightColor so it's never pitch black
-                  vec3 finalLight = lightColor.rgb + vec3(0.15); 
+                  vec3 finalLight = uLightColor + vec3(0.15); 
                   
                   // Combine
                   gl_FragColor = vec4(texColor.rgb * finalLight * uStrength, 1.0);
@@ -536,14 +563,47 @@ export class MountainScene {
   updateLightFromVideo(dt) {
     if (!this.video || this.video.paused) return;
 
-    // Render video to 1x1 texture (GPU Downsample)
-    // No CPU readback, no buffer transfer. Extremely fast.
-    const oldTarget = this.renderer.getRenderTarget();
-    this.renderer.setRenderTarget(this.avgColorRT);
-    this.renderer.render(this.lightCvtScene, this.lightCvtCamera);
-    this.renderer.setRenderTarget(oldTarget);
+    // 1. Throttle Sampling (5Hz)
+    this.lightUpdateTimer += dt;
+    if (this.lightUpdateTimer > this.lightUpdateInterval) {
+      this.lightUpdateTimer = 0;
 
-    // That's it! The 'tVideoAvg' uniform in the shader now holds the current frame's average color.
+      // Render video to 1x1 RT
+      const oldTarget = this.renderer.getRenderTarget();
+      this.renderer.setRenderTarget(this.avgColorRT);
+      // Ensure background is cleared if needed, but we fill screen
+      this.renderer.render(this.lightCvtScene, this.lightCvtCamera);
+
+      // Read Pixel to CPU (Sync)
+      // Note: readRenderTargetPixels reads y-flipped typically? Doesn't matter for 1x1 average.
+      this.renderer.readRenderTargetPixels(
+        this.avgColorRT,
+        0,
+        0,
+        1,
+        1,
+        this.pixelBuffer
+      );
+      this.renderer.setRenderTarget(oldTarget);
+
+      // Update Target (Normalize 0-255 -> 0-1)
+      this.targetColor.r = this.pixelBuffer[0] / 255;
+      this.targetColor.g = this.pixelBuffer[1] / 255;
+      this.targetColor.b = this.pixelBuffer[2] / 255;
+    }
+
+    // 2. Smooth Interpolation (Every Frame)
+    // Lerp factor: 5.0 * dt gives responsive but smooth catch-up
+    const lerpFactor = 4.0 * dt;
+    this.currentColor.lerp(this.targetColor, lerpFactor);
+
+    // 3. Update Shared Uniform
+    // (We updated the object reference in initLoader, so it's auto-bound,
+    // BUT 'value' primitives need copying if they aren't the same object reference.
+    // 'uLightColor' value IS 'this.currentColor', so modifying 'this.currentColor' works directly?
+    // YES, if we passed the object.
+    // "uLightColor: { value: this.currentColor }" passes the REFERENCE to this.currentColor.
+    // So mutating this.currentColor automatically updates the uniform value.)
   }
 
   updateSnow(time, dt) {
@@ -553,6 +613,36 @@ export class MountainScene {
   }
 
   update(time, dt) {
+    // WATCHDOG: Detect freeze on start
+    // Only intervene if we are supposed to be playing, we have data (readyState >= 3), but time isn't moving.
+    if (this.playing && this.video && !this.video.paused) {
+      if (Math.abs(this.video.currentTime - this.lastTime) < 0.01) {
+        if (this.video.readyState >= 3) {
+          this.stuckTime += dt;
+          if (this.stuckTime > 0.5) {
+            // Stuck for 500ms despite having data
+            console.warn(
+              `[Mountain] Video Watchdog: Stuck at ${this.video.currentTime.toFixed(
+                2
+              )}s (Ready: ${this.video.readyState}). Forcing play...`
+            );
+            this.video
+              .play()
+              .catch((e) =>
+                console.error('[Mountain] Watchdog play failed', e)
+              );
+            this.stuckTime = 0;
+          }
+        } else {
+          // Buffering is normal, reset stuck time
+          this.stuckTime = 0;
+        }
+      } else {
+        this.stuckTime = 0;
+        this.lastTime = this.video.currentTime;
+      }
+    }
+
     // this.perfMonitor.update(dt);
     // this.perfMonitor.update(dt);
     this.updateLightFromVideo(dt);
@@ -570,7 +660,24 @@ export class MountainScene {
 
   playVideo() {
     if (this.video && this.video.paused && !document.hidden) {
-      this.video.play().catch(() => {});
+      this.video.play().catch((e) => {
+        console.error('[Mountain] Video Play failed:', e);
+        // If "NotAllowedError", user needs to interact.
+        // We rely on the Loader Button 'click' to have unlocked this,
+        // but if it fails, maybe we need to try mute?
+        if (e.name === 'NotAllowedError') {
+          console.warn('[Mountain] Autoplay blocked. Attempting mute...');
+          this.video.muted = true;
+          this.video
+            .play()
+            .catch((err) =>
+              console.error('[Mountain] Muted Autoplay also failed', err)
+            );
+        }
+      });
+      this.playing = true;
+      this.lastTime = this.video.currentTime;
+      this.stuckTime = 0;
     }
   }
 
@@ -644,7 +751,10 @@ export class MountainScene {
     }
 
     // 3. Play Video
-    this.playVideo();
+    // REMOVED: We don't auto-play on mount anymore.
+    // We let main.js control playback via enterSite() / visibility logic.
+    // This prevents the "AbortError" where mount() plays and main.js immediately pauses.
+    // this.playVideo();
   }
 
   updateScroll(scrollY) {
