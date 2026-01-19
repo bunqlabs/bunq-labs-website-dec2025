@@ -43,8 +43,9 @@ let siteEntered = false;
 
 // Scroll State
 let currentScrollY = window.scrollY;
-let virtualScrollY = window.scrollY;
-let lastRawScrollY = window.scrollY;
+let virtualScrollY = 0; // Starts at 0, accumulates globally
+let globalScrollOffset = 0; // The base offset from previous pages
+let lastRawScrollY = 0;
 
 // === INITIALIZATION ===
 
@@ -195,27 +196,17 @@ function updateRouteState(namespace, container) {
 
 function updateVirtualScroll() {
   // WITH LENIS: We trust lenis for the scroll value
-  // NOTE: lenis.scroll gives the current smoothed scroll position
-  const raw = lenis.scroll;
+  // STRICT SYNC: virtualScrollY is strictly absolute global offset + current local scroll
+  // This preserves the exact easing curve of Lenis
+  const raw = lenis.scroll; // Current local scroll on this page (smoothed)
 
-  // const delta = raw - lastRawScrollY;
-  // For 'ScrollBender', we might need the exact frame delta, or just feed it 'raw'
-  // But wait, existing logic accumulating `virtualScrollY` based on delta was for "infinite" or bending logic?
-  // Let's check:
-  // virtualScrollY += delta;
-  // Actually, standardizing on just "raw" might be safer if we fully trust Lenis.
-  // But `GrassScene` might rely on infinite accumulation?
+  virtualScrollY = globalScrollOffset + raw;
 
-  // Let's stick to the previous pattern but fed by Lenis:
-
-  const delta = raw - lastRawScrollY;
-
-  if (!window.isNavigatingReset) {
-    virtualScrollY += delta;
-  }
-
-  lastRawScrollY = raw;
+  // Note: currentScrollY is used for non-infinite things, like mountain/bender
+  // It should probably just track 'raw' (local) for those local effects?
+  // Existing code sets currentScrollY = raw.
   currentScrollY = raw;
+  lastRawScrollY = raw;
 }
 
 // Ensure Lenis updates happen
@@ -282,6 +273,10 @@ if (barba) {
           // Automatically clean up any registered listeners/observers
           window.cleanupOnLeave();
 
+          // Update Global Offset for Continuity
+          // Current virtual position becomes the new "zero" base for the next page
+          globalScrollOffset = virtualScrollY;
+
           // Still call specific component destroys if they are not yet using global disposables
           clientLogoCycler.destroy();
           acceleratingGlobe.destroy();
@@ -341,7 +336,7 @@ if (barba) {
           return new Promise((resolve) => {
             try {
               // Reset Scroll via Lenis
-              window.isNavigatingReset = true;
+              // window.isNavigatingReset = true; // Removed (Legacy Delta logic)
               isTransitioning = true;
 
               // window.scrollTo(0, 0); // Native
@@ -349,10 +344,11 @@ if (barba) {
 
               lastRawScrollY = 0;
               currentScrollY = 0;
+              // note: virtualScrollY will automatically pick up globalScrollOffset + 0 on next frame
 
-              requestAnimationFrame(() => {
-                window.isNavigatingReset = false;
-              });
+              // requestAnimationFrame(() => {
+              //   window.isNavigatingReset = false;
+              // });
 
               const ns =
                 data.next.namespace ||

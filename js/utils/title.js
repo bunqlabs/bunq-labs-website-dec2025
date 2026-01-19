@@ -1,40 +1,20 @@
 /**
  * Page Title Changer
- * Alternates the document title when the tab loses focus to re-engage users.
+ * Changes the document title when the tab loses focus.
  */
 export function initPageTitleChanger() {
-  let originalTitle = document.title;
-  const alertTitle = "Wait! There's still more 👀";
-  const brandTitle = 'BUNQ LABS';
-  let intervalId = null;
+  const documentTitleStore = document.title;
+  const documentTitleOnBlur = "Wait! There's still more 👀";
 
-  function startBlinking() {
-    // Capture the current title in case it changed via navigation
-    originalTitle = document.title;
+  // Set original title if user is on the site
+  window.addEventListener('focus', () => {
+    document.title = documentTitleStore;
+  });
 
-    // Immediate toggle state
-    let showAlert = true;
-    document.title = alertTitle;
-
-    intervalId = setInterval(() => {
-      showAlert = !showAlert;
-      document.title = showAlert ? alertTitle : brandTitle;
-    }, 2000);
-  }
-
-  function stopBlinking() {
-    if (intervalId) {
-      clearInterval(intervalId);
-      intervalId = null;
-    }
-    // Restore original title
-    if (originalTitle) {
-      document.title = originalTitle;
-    }
-  }
-
-  window.addEventListener('blur', startBlinking);
-  window.addEventListener('focus', stopBlinking);
+  // If user leaves tab, set the alternative title
+  window.addEventListener('blur', () => {
+    document.title = documentTitleOnBlur;
+  });
 
   console.log('[Utils] Page Title Changer initialized');
 }
