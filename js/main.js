@@ -268,9 +268,11 @@ function onResize() {
   const w = container.clientWidth;
   const h = container.clientHeight;
 
-  renderer.setSize(w, h);
-  mountainScene.resize(w, h);
-  grassScene.resize(w, h);
+  if (isDesktop) {
+    renderer.setSize(w, h);
+    if (mountainScene) mountainScene.resize(w, h);
+    if (grassScene) grassScene.resize(w, h);
+  }
   scrollBender.resize();
 
   // update cache
