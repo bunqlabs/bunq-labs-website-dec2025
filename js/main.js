@@ -21,7 +21,6 @@ import {
   initPageTitleChanger,
   QualityManager,
   PerformanceMonitor,
-  PerformanceMonitor,
   CaseStudyNavigation,
   Config,
 } from './modules.js';
@@ -220,7 +219,9 @@ function updateRouteState(namespace, container) {
     // DO NOT mount grass if we are on home and mountain is covering everything
     // But since mountain scrolls, we might need grass later.
     // For now, let's keep grass mounted but control RENDER loop strictly.
-    grassScene.mount(); // DEBUG: Disabled to test video stutter isolation
+    if (isDesktop && grassScene) {
+      grassScene.mount();
+    }
   } else {
     isHome = false;
 
@@ -230,10 +231,12 @@ function updateRouteState(namespace, container) {
     }
     mountainEl = null;
 
-    mountainScene.unmount();
-    renderer.toneMapping = THREE.NoToneMapping;
-    renderer.setScissorTest(false);
-    grassScene.mount();
+    if (isDesktop) {
+      if (mountainScene) mountainScene.unmount();
+      renderer.toneMapping = THREE.NoToneMapping;
+      renderer.setScissorTest(false);
+      if (grassScene) grassScene.mount();
+    }
   }
 }
 
@@ -518,7 +521,7 @@ function animate(time) {
   renderer.setScissorTest(false);
 
   // Update MountainScene "Relative Scroll" position
-  mountainScene.updateScroll(currentScrollY);
+  if (mountainScene) mountainScene.updateScroll(currentScrollY);
 
   // Visibility Check
   mountainVisible = false;
@@ -547,9 +550,9 @@ function animate(time) {
   // === VIDEO PLAYBACK CONTROL ===
   if (mountainVisible !== lastMountainVisible) {
     if (mountainVisible && siteEntered) {
-      mountainScene.playVideo();
+      if (mountainScene) mountainScene.playVideo();
     } else {
-      mountainScene.pauseVideo();
+      if (mountainScene) mountainScene.pauseVideo();
     }
     lastMountainVisible = mountainVisible;
   }
@@ -558,23 +561,31 @@ function animate(time) {
   // "Never have dual scene rendering. Always have only one."
 
   // 1. Mountain (Priority if visible)
-  if (mountainVisible) {
-    // Render Mountain ONLY
-    mountainScene.update(t, dt);
-    mountainScene.render();
+  // 1. Mountain (Priority if visible)
+  if (isDesktop) {
+    if (mountainVisible) {
+      // Render Mountain ONLY
+      if (mountainScene) {
+        mountainScene.update(t, dt);
+        mountainScene.render();
 
-    // Push scroll to grass even if not rendering, so it doesn't jump
-    // Use smoothed virtualScrollY from Lenis logic (continuous across pages)
-    if (window.innerWidth >= Config.System.desktopBreakpoint) {
-      grassScene.updateScrollState(virtualScrollY);
+        // Push scroll to grass even if not rendering, so it doesn't jump
+        // Use smoothed virtualScrollY from Lenis logic (continuous across pages)
+        if (
+          window.innerWidth >= Config.System.desktopBreakpoint &&
+          grassScene
+        ) {
+          grassScene.updateScrollState(virtualScrollY);
+        }
+      }
+    } else {
+      // 2. Grass (Fallback if Mountain not visible)
+      if (window.innerWidth >= Config.System.desktopBreakpoint && grassScene) {
+        grassScene.updateScrollState(virtualScrollY);
+        grassScene.update(t, dt);
+        grassScene.render();
+      }
     }
-  } else {
-    // 2. Grass (Fallback if Mountain not visible)
-    if (window.innerWidth >= Config.System.desktopBreakpoint) {
-      grassScene.updateScrollState(virtualScrollY);
-    }
-    grassScene.update(t, dt);
-    grassScene.render();
   }
 
   // Update scroll bending effect independently of scenes
@@ -615,7 +626,10 @@ if (initialLoader && loaderBtn) {
   }, 1000);
 
   // 2. Wait for Video to be Ready (Real Load Event)
-  const video = mountainScene.video;
+
+  const video = isDesktop
+    ? mountainScene.video
+    : document.getElementById('mobile-bg-video');
 
   function onReady() {
     // 3. Pre-flight Benchmark (500ms dead time)
@@ -664,7 +678,9 @@ if (initialLoader && loaderBtn) {
   function enterSite() {
     siteEntered = true;
     // Trigger Animation
-    mountainScene.animateEntry();
+    if (isDesktop && mountainScene) {
+      mountainScene.animateEntry();
+    }
 
     // Animate Out Loader
     gsap.to(initialLoader, {
@@ -734,6 +750,6 @@ if (initialLoader && loaderBtn) {
     }
   }
 
-  // Start checking immediately (video is already created in MountainScene)
+  // Start checking immediately (video is already created in MountainScene or injected)
   checkBuffer();
 }
