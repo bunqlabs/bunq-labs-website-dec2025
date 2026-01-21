@@ -363,7 +363,7 @@ if (barba) {
               // MANUAL CLEANUP: Ensure old container is GONE.
               if (data.current.container && data.current.container.parentNode) {
                 data.current.container.parentNode.removeChild(
-                  data.current.container
+                  data.current.container,
                 );
               }
 
@@ -513,10 +513,14 @@ function animate(time) {
 
     // Push scroll to grass even if not rendering, so it doesn't jump
     // Use smoothed virtualScrollY from Lenis logic (continuous across pages)
-    grassScene.updateScrollState(virtualScrollY);
+    if (window.innerWidth >= 1024) {
+      grassScene.updateScrollState(virtualScrollY);
+    }
   } else {
     // 2. Grass (Fallback if Mountain not visible)
-    grassScene.updateScrollState(virtualScrollY);
+    if (window.innerWidth >= 1024) {
+      grassScene.updateScrollState(virtualScrollY);
+    }
     grassScene.update(t, dt);
     grassScene.render();
   }
@@ -586,7 +590,7 @@ if (initialLoader && loaderBtn) {
           audioManager.unlock();
           enterSite();
         },
-        { once: true }
+        { once: true },
       );
 
       // 3b. Mute Interaction (Without Audio)
@@ -599,7 +603,7 @@ if (initialLoader && loaderBtn) {
             audioManager.setMute(true); // Update UI to 'SOUND OFF'
             enterSite();
           },
-          { once: true }
+          { once: true },
         );
       }
     }, 800); // 800ms dead time for benchmark
@@ -650,7 +654,7 @@ if (initialLoader && loaderBtn) {
         // DEBUG: Log gaps if we are stuck
         if (video.buffered.length > 1) {
           console.warn(
-            `[Video Loader] Fragmentation detected! ${video.buffered.length} ranges.`
+            `[Video Loader] Fragmentation detected! ${video.buffered.length} ranges.`,
           );
         }
         break; // Found our range, stop searching
@@ -669,8 +673,8 @@ if (initialLoader && loaderBtn) {
     if (percentLoaded > 99) {
       console.log(
         `[Video Loader] Ready triggered by: Buffer 100% (${Math.floor(
-          percentLoaded
-        )}%)`
+          percentLoaded,
+        )}%)`,
       );
       onReady();
     } else {
