@@ -1,4 +1,7 @@
 export const Config = {
+  System: {
+    desktopBreakpoint: 1024,
+  },
   Mountain: {
     snowCount: 500,
     snowArea: { x: 0.5, y: 0.5, z: 0.5 },

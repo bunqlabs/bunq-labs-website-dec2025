@@ -12,7 +12,7 @@ export class AcceleratingGlobe {
 
     globes.forEach((globe) => {
       const circles = globe.querySelectorAll(
-        '[data-accelerating-globe-circle]'
+        '[data-accelerating-globe-circle]',
       );
       if (circles.length < 8) return; // Min 8 for this specific animation logic
 
@@ -43,6 +43,19 @@ export class AcceleratingGlobe {
       });
 
       this.timelines.push(tl);
+
+      // Visibility Check: Pause when out of view
+      if (window.observeWith) {
+        window.observeWith(globe, { threshold: 0 }, (entry) => {
+          if (entry.isIntersecting) {
+            console.log('[AcceleratingGlobe] In View - PLAY');
+            tl.play();
+          } else {
+            console.log('[AcceleratingGlobe] Out of View - PAUSE');
+            tl.pause();
+          }
+        });
+      }
     });
 
     // Setup Scroll Listener for Acceleration

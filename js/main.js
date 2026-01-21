@@ -21,7 +21,9 @@ import {
   initPageTitleChanger,
   QualityManager,
   PerformanceMonitor,
+  PerformanceMonitor,
   CaseStudyNavigation,
+  Config,
 } from './modules.js';
 
 // === CONFIGURATION & STATE ===
@@ -31,6 +33,11 @@ const container = document.getElementById('webgl');
 const gradientEl = document.getElementById('webgl-gradient');
 const clock = new THREE.Clock();
 const stats = new Stats();
+
+// === STATIC MOBILE/DESKTOP SPLIT ===
+const isDesktop = window.innerWidth >= Config.System.desktopBreakpoint;
+// Removed static selection; will inject dynamically
+// const mobileVideo = document.getElementById('mobile-bg-video');
 
 let isHome = false;
 let mountainEl = null;
@@ -104,8 +111,42 @@ renderer.setScissorTest(false);
 container.appendChild(renderer.domElement);
 
 // Pass QualityManager to scenes
-const mountainScene = new MountainScene(renderer, qualityManager);
-const grassScene = new GrassScene(renderer, qualityManager);
+let mountainScene, grassScene;
+
+if (isDesktop) {
+} else {
+  // Mobile: Inject Video, Skip Scenes
+  console.log('[Mobile] Injecting Background Video');
+
+  const video = document.createElement('video');
+  video.id = 'mobile-bg-video';
+  video.className = 'bg-video-mobile';
+  video.autoplay = true;
+  video.muted = true;
+  video.loop = true;
+  video.playsInline = true;
+
+  const source = document.createElement('source');
+  source.src = './assets/video/showreel_optimised.mp4';
+  source.type = 'video/mp4';
+
+  video.appendChild(source);
+
+  // Inject into canvas container
+  if (container) {
+    container.appendChild(video);
+    // Explicitly hide WebGL canvas on mobile
+    // renderer.domElement is appended but we can hide it or container
+    // Actually we want video visible, canvas hidden.
+    // Since video is in container, we keep container visible but hide #webgl
+    const webglEl = document.getElementById('webgl');
+    if (webglEl) webglEl.style.display = 'none';
+  }
+
+  // Force play
+  video.play().catch((e) => console.log('Video Autoplay failed', e));
+}
+
 const scrollBender = new ScrollBender();
 const audioManager = new AudioManager();
 const clientLogoCycler = new ClientLogoCycler();
@@ -116,9 +157,11 @@ const serviceCards = new ServiceCards();
 const textScrambler = new TextScrambler();
 const caseStudyNavigation = new CaseStudyNavigation();
 
-renderer.setSize(container.clientWidth, container.clientHeight);
-mountainScene.resize(container.clientWidth, container.clientHeight);
-grassScene.resize(container.clientWidth, container.clientHeight);
+if (isDesktop) {
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  mountainScene.resize(container.clientWidth, container.clientHeight);
+  grassScene.resize(container.clientWidth, container.clientHeight);
+}
 textScrambler.init();
 
 // === LOGIC ===
@@ -159,9 +202,11 @@ function updateRouteState(namespace, container) {
 
     if (mountainEl) {
       console.log('[Route] Mountain Element found, mounting scene.');
-      mountainScene.mount();
-      // Start observing for size changes (handles transition/load timing)
-      mountainObserver.observe(mountainEl);
+      if (isDesktop) {
+        mountainScene.mount();
+        // Start observing for size changes (handles transition/load timing)
+        mountainObserver.observe(mountainEl);
+      }
 
       // Also call once immediately in case it's already stable
       calcMountainConfig();
@@ -224,6 +269,13 @@ function onResize() {
 
   // update cache
   calcMountainConfig();
+
+  // === RELOAD ON BREAKPOINT CROSS ===
+  const newIsDesktop = window.innerWidth >= Config.System.desktopBreakpoint;
+  if (newIsDesktop !== isDesktop) {
+    console.log('[Resize] Breakpoint crossed. Reloading...');
+    window.location.reload();
+  }
 }
 window.addEventListener('resize', onResize, { passive: true });
 
@@ -513,12 +565,12 @@ function animate(time) {
 
     // Push scroll to grass even if not rendering, so it doesn't jump
     // Use smoothed virtualScrollY from Lenis logic (continuous across pages)
-    if (window.innerWidth >= 1024) {
+    if (window.innerWidth >= Config.System.desktopBreakpoint) {
       grassScene.updateScrollState(virtualScrollY);
     }
   } else {
     // 2. Grass (Fallback if Mountain not visible)
-    if (window.innerWidth >= 1024) {
+    if (window.innerWidth >= Config.System.desktopBreakpoint) {
       grassScene.updateScrollState(virtualScrollY);
     }
     grassScene.update(t, dt);

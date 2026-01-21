@@ -13,6 +13,7 @@ window.ScrollTrigger = ScrollTrigger;
 export { THREE, Stats, gsap, ScrollTrigger, Lenis };
 
 // Utilities
+export { Config } from './settings.js';
 export { initDisposables } from './utils/disposables.js';
 export { initObserverHub } from './utils/observers.js';
 export { initPageVisibility } from './utils/visibility.js';
