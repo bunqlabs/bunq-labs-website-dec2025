@@ -113,6 +113,9 @@ container.appendChild(renderer.domElement);
 let mountainScene, grassScene;
 
 if (isDesktop) {
+  // Desktop: Init Scenes
+  mountainScene = new MountainScene(renderer, qualityManager);
+  grassScene = new GrassScene(renderer, qualityManager);
 } else {
   // Mobile: Inject Video, Skip Scenes
   console.log('[Mobile] Injecting Background Video');
