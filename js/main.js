@@ -22,6 +22,7 @@ import {
   QualityManager,
   PerformanceMonitor,
   CaseStudyNavigation,
+  VideoLoader,
   Config,
 } from './modules.js';
 
@@ -70,6 +71,14 @@ const lenis = new Lenis({
   smoothWheel: true,
 });
 
+// SCROLL RESET & LOCK
+if ('scrollRestoration' in history) {
+  history.scrollRestoration = 'manual';
+}
+window.scrollTo(0, 0);
+lenis.scrollTo(0, { immediate: true });
+lenis.stop(); // Disable scroll initially
+
 initPageVisibility(lenis);
 
 // --- SCROLL OPTIMIZATION ---
@@ -110,61 +119,28 @@ renderer.setScissorTest(false);
 container.appendChild(renderer.domElement);
 
 // Pass QualityManager to scenes
+const videoLoader = new VideoLoader();
+// Start Loading Assets Immediately
+const videoAssets = [
+  {
+    id: 'showreel',
+    src: 'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/video/showreel_optimised.mp4',
+  },
+];
+
+// Add mobile-specific background if needed, or if it's the same file.
+// User mentioned 'website-bg'. If it's different, add it.
+// Assuming for now mobile uses a separate file or the same one as showreel.
+// If 'website-bg' is distinct:
+videoAssets.push({
+  id: 'website-bg',
+  src: 'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/video/website-bg.mp4',
+});
+
+videoLoader.load(videoAssets);
+
+// We will inject them later when Ready
 let mountainScene, grassScene;
-
-if (isDesktop) {
-  // Desktop: Init Both Scenes
-  mountainScene = new MountainScene(renderer, qualityManager);
-  grassScene = new GrassScene(renderer, qualityManager);
-} else {
-  // Mobile: Init Mountain Only (Grass is Video)
-  mountainScene = new MountainScene(renderer, qualityManager);
-  // grassScene remains undefined
-}
-
-if (!isDesktop) {
-  // Mobile: Inject Background Video
-  console.log('[Mobile] Injecting Background Video');
-
-  const video = document.createElement('video');
-  video.id = 'mobile-bg-video';
-  video.className = 'bg-video-mobile';
-  video.autoplay = true;
-  video.muted = true;
-  video.loop = true;
-  video.playsInline = true;
-
-  const source = document.createElement('source');
-  source.src =
-    'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/video/website-bg.mp4';
-  source.type = 'video/mp4';
-
-  video.appendChild(source);
-
-  // Inject into canvas container
-  if (container) {
-    container.appendChild(video);
-    // Explicitly hide WebGL canvas on mobile
-    // renderer.domElement is appended but we can hide it or container
-    // Actually we want video visible, canvas hidden.
-    // Since video is in container, we keep container visible but hide #webgl
-    // Actually we want video visible, canvas hidden.
-    // Since video is in container, we keep container visible but hide #webgl
-    // UPDATE: We want #webgl VISIBLE on mobile now, so MountainScene can render on top.
-    // const webglEl = document.getElementById('webgl');
-    // if (webglEl) webglEl.style.display = 'none';
-  }
-
-  // Force play
-  video.play().catch((e) => console.log('Video Autoplay failed', e));
-
-  // Error handling to prevent loader hang
-  video.onerror = () => {
-    console.error('[Mobile] Video failed to load:', video.error);
-    // Mark as ready so loader doesn't hang
-    video.hasError = true;
-  };
-}
 
 const scrollBender = new ScrollBender();
 const audioManager = new AudioManager();
@@ -178,12 +154,15 @@ const caseStudyNavigation = new CaseStudyNavigation();
 
 if (isDesktop) {
   renderer.setSize(container.clientWidth, container.clientHeight);
-  mountainScene.resize(container.clientWidth, container.clientHeight);
-  grassScene.resize(container.clientWidth, container.clientHeight);
+  if (mountainScene)
+    mountainScene.resize(container.clientWidth, container.clientHeight);
+  if (grassScene)
+    grassScene.resize(container.clientWidth, container.clientHeight);
 } else {
   // Mobile Resize: Only Mountain
   renderer.setSize(container.clientWidth, container.clientHeight);
-  mountainScene.resize(container.clientWidth, container.clientHeight);
+  if (mountainScene)
+    mountainScene.resize(container.clientWidth, container.clientHeight);
 }
 textScrambler.init();
 
@@ -225,7 +204,7 @@ function updateRouteState(namespace, container) {
 
     if (mountainEl) {
       console.log('[Route] Mountain Element found, mounting scene.');
-      if (isDesktop) {
+      if (isDesktop && mountainScene) {
         mountainScene.mount();
         // Start observing for size changes (handles transition/load timing)
         mountainObserver.observe(mountainEl);
@@ -666,13 +645,50 @@ if (initialLoader && loaderBtn) {
     loaderBtn.textContent = 'Loading' + '.'.repeat(dots);
   }, 1000);
 
-  // 2. Wait for Video to be Ready (Real Load Event)
+  // 2. Wait for Video Loader
+  videoLoader.onProgress = (progress) => {
+    // Optional: Log progress or update a visual bar
+    // console.log(\`[Loader] Video Progress: \${Math.floor(progress)}%\`);
+  };
 
-  const video = isDesktop
-    ? mountainScene.video
-    : document.getElementById('mobile-bg-video');
+  videoLoader.onComplete = () => {
+    onReady();
+  };
+
+  // Start polling if not using the interval approach inside loader (internal polling is used)
 
   function onReady() {
+    // Initialize Scenes with Preloaded Video
+    const showreelVideo = videoLoader.getVideo('showreel');
+    const bgVideo = videoLoader.getVideo('website-bg');
+
+    if (isDesktop) {
+      mountainScene = new MountainScene(
+        renderer,
+        qualityManager,
+        showreelVideo,
+      );
+      grassScene = new GrassScene(renderer, qualityManager);
+    } else {
+      // Mobile
+      mountainScene = new MountainScene(
+        renderer,
+        qualityManager,
+        showreelVideo,
+      );
+
+      // Inject Background Video (bgVideo)
+      if (bgVideo && container) {
+        bgVideo.id = 'mobile-bg-video';
+        bgVideo.className = 'bg-video-mobile';
+        container.appendChild(bgVideo);
+        bgVideo.play().catch((e) => console.log('Mobile BG Autoplay fail', e));
+      }
+    }
+
+    // Initial Resize to set up created scenes
+    onResize();
+
     // 3. Pre-flight Benchmark (500ms dead time)
     loaderBtn.textContent = 'Calibrating...';
     perfMonitor.startBenchmark();
@@ -727,6 +743,9 @@ if (initialLoader && loaderBtn) {
     }
     // No longer need manual transparency hack since mountainScene does it
 
+    // Enable Scroll
+    lenis.start();
+
     // Animate Out Loader
     gsap.to(initialLoader, {
       opacity: 0,
@@ -735,81 +754,5 @@ if (initialLoader && loaderBtn) {
     });
   }
 
-  function checkBuffer() {
-    if (!video) {
-      onReady(); // Fallback
-      return;
-    }
-
-    // 1. Initial State Check (HAVE_CURRENT_DATA or more)
-    // Also check for explicit error flag set in onerror handler
-    if (video.readyState < 2 && !video.hasError) {
-      if (video.error) {
-        console.warn('[Video Loader] Video Error detected via API. Bypassing.');
-        onReady();
-        return;
-      }
-      requestAnimationFrame(checkBuffer);
-      return;
-    }
-
-    // If error occurred, bypass normal buffer check
-    if (video.hasError) {
-      console.warn(
-        '[Video Loader] Video Error detected. Bypassing buffer check.',
-      );
-      onReady();
-      return;
-    }
-
-    // 2. Check Buffer Percentage
-    let percentLoaded = 0;
-    // CRITICAL FIX: Summing ranges hides gaps!
-    // Ensure we have a CONTINUOUS block of data from the current time.
-    const ct = video.currentTime;
-    const duration = video.duration || 1;
-
-    for (let i = 0; i < video.buffered.length; i++) {
-      const start = video.buffered.start(i);
-      const end = video.buffered.end(i);
-
-      // Find the range that covers our current playback position
-      if (ct >= start && ct <= end) {
-        // How much is loaded AHEAD of us in this specific contiguous block?
-        const loadedSeconds = end - ct;
-        percentLoaded = (loadedSeconds / duration) * 100;
-
-        // DEBUG: Log gaps if we are stuck
-        if (video.buffered.length > 1) {
-          console.warn(
-            `[Video Loader] Fragmentation detected! ${video.buffered.length} ranges.`,
-          );
-        }
-        break; // Found our range, stop searching
-      }
-    }
-    // Update Loader Text for Feedback (Optional but helpful)
-    // loaderBtn.textContent = \`Loading \${Math.min(99, Math.floor(percentLoaded))}%\`;
-
-    // 3. Threshold Check
-    // STRICT: User requested 100% (wait for full download).
-    if (Math.floor(percentLoaded) > (checkBuffer.lastLogged || 0) + 10) {
-      console.log(`[Video Loader] Buffered: ${Math.floor(percentLoaded)}%`);
-      checkBuffer.lastLogged = Math.floor(percentLoaded);
-    }
-
-    if (percentLoaded > 99) {
-      console.log(
-        `[Video Loader] Ready triggered by: Buffer 100% (${Math.floor(
-          percentLoaded,
-        )}%)`,
-      );
-      onReady();
-    } else {
-      requestAnimationFrame(checkBuffer);
-    }
-  }
-
-  // Start checking immediately (video is already created in MountainScene or injected)
-  checkBuffer();
+  // VideoLoader handles its own checks now
 }

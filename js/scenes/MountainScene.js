@@ -7,10 +7,11 @@ import gsap from 'https://unpkg.com/gsap@3.12.5/index.js?module';
 export class MountainScene {
   // === LIFECYCLE ===
 
-  constructor(renderer, qualityManager) {
+  constructor(renderer, qualityManager, externalVideo = null) {
     console.log('[Mountain] Constructor called');
     this.renderer = renderer;
     this.qm = qualityManager;
+    this.externalVideo = externalVideo;
     this.scene = new THREE.Scene();
 
     // Create a root group for all scrolling content
@@ -234,21 +235,30 @@ export class MountainScene {
     );
     this.contentGroup.add(this.screenMesh);
 
-    this.video = document.createElement('video');
-    this.video.crossOrigin = 'anonymous';
-    this.video.src = `https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/video/showreel_optimised.mp4?t=${Date.now()}`;
-    this.video.muted = true;
-    this.video.loop = true;
-    this.video.playsInline = true;
-    this.video.preload = 'auto';
+    if (this.externalVideo) {
+      this.video = this.externalVideo;
+      console.log('[Mountain] Using preloaded video element');
+    } else {
+      this.video = document.createElement('video');
+      this.video.crossOrigin = 'anonymous';
+      this.video.src = `https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/video/showreel_optimised.mp4?t=${Date.now()}`;
+      this.video.muted = true;
+      this.video.playsInline = true;
+      this.video.preload = 'auto';
+    }
 
-    // this.video.autoplay = true; // Manual control only
+    // FORCE LOOP (fixes potential loss of attribute)
+    this.video.loop = true;
 
     // SAFETY: Ensure loop works even if browser feels quirky
-    this.video.addEventListener('ended', () => {
+    // Remove previous listener to avoid duplicates if re-initializing
+    this.video.removeEventListener('ended', this.onVideoEnded);
+    this.onVideoEnded = () => {
+      console.log('[Mountain] Video ended. Forcing replay (Loop Falback).');
       this.video.currentTime = 0;
       this.video.play().catch(() => {});
-    });
+    };
+    this.video.addEventListener('ended', this.onVideoEnded);
 
     // DEBUG: Monitor Video State
     const logVideo = (msg) =>
@@ -616,15 +626,18 @@ export class MountainScene {
     // WATCHDOG: Detect freeze on start
     // Only intervene if we are supposed to be playing, we have data (readyState >= 3), but time isn't moving.
     if (this.playing && this.video && !this.video.paused) {
-      if (Math.abs(this.video.currentTime - this.lastTime) < 0.01) {
+      const ct = this.video.currentTime;
+      // If time went BACKWARDS, we looped. Reset.
+      if (ct < this.lastTime) {
+        this.stuckTime = 0;
+        this.lastTime = ct;
+      } else if (Math.abs(ct - this.lastTime) < 0.01) {
         if (this.video.readyState >= 3) {
           this.stuckTime += dt;
           if (this.stuckTime > 0.5) {
             // Stuck for 500ms despite having data
             console.warn(
-              `[Mountain] Video Watchdog: Stuck at ${this.video.currentTime.toFixed(
-                2,
-              )}s (Ready: ${this.video.readyState}). Forcing play...`,
+              `[Mountain] Video Watchdog: Stuck at ${ct.toFixed(2)}s (Ready: ${this.video.readyState}). Forcing play...`,
             );
             this.video
               .play()
@@ -639,7 +652,7 @@ export class MountainScene {
         }
       } else {
         this.stuckTime = 0;
-        this.lastTime = this.video.currentTime;
+        this.lastTime = ct;
       }
     }
 

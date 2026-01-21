@@ -21,6 +21,7 @@ export { initBadgeRemover } from './utils/badge.js';
 export { initPageTitleChanger } from './utils/title.js';
 export { QualityManager } from './utils/QualityManager.js';
 export { PerformanceMonitor } from './utils/PerformanceMonitor.js';
+export { VideoLoader } from './utils/VideoLoader.js';
 
 // Scenes
 export { MountainScene } from './scenes/MountainScene.js';
