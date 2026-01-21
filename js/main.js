@@ -685,6 +685,12 @@ if (initialLoader && loaderBtn) {
     // Trigger Animation
     if (isDesktop && mountainScene) {
       mountainScene.animateEntry();
+    } else {
+      // Mobile: Manually fade in content since MountainScene is absent
+      const mainWrapper = document.querySelector('.main-wrapper');
+      if (mainWrapper) {
+        gsap.to(mainWrapper, { opacity: 1, duration: 1 });
+      }
     }
 
     // Animate Out Loader
