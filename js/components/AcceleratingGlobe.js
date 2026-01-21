@@ -1,4 +1,5 @@
 import gsap from 'https://unpkg.com/gsap@3.12.5/index.js?module';
+import { Config } from '../modules.js';
 
 export class AcceleratingGlobe {
   constructor() {
@@ -58,44 +59,48 @@ export class AcceleratingGlobe {
       }
     });
 
-    // Setup Scroll Listener for Acceleration
-    let lastY = window.scrollY;
-    let lastT = performance.now();
-    let stopTimeout;
+    // Setup Scroll Listener for Acceleration (Desktop Only)
+    const isMobile = window.innerWidth < Config.System.desktopBreakpoint;
 
-    this.scrollHandler = () => {
-      // Only accelerate if we have active timelines
-      if (this.timelines.length === 0) return;
+    if (!isMobile) {
+      let lastY = window.scrollY;
+      let lastT = performance.now();
+      let stopTimeout;
 
-      const now = performance.now();
-      const dy = window.scrollY - lastY;
-      const dt = now - lastT;
-      lastY = window.scrollY;
-      lastT = now;
+      this.scrollHandler = () => {
+        // Only accelerate if we have active timelines
+        if (this.timelines.length === 0) return;
 
-      // Calculate velocity (pixels per second), use absolute value for speed scalar
-      const velocity = dt > 0 ? (dy / dt) * 1000 : 0;
-      const boost = Math.abs(velocity * 0.005);
-      const targetScale = boost + 1;
+        const now = performance.now();
+        const dy = window.scrollY - lastY;
+        const dt = now - lastT;
+        lastY = window.scrollY;
+        lastT = now;
 
-      // Apply timeScale to all active timelines
-      this.timelines.forEach((tl) => tl.timeScale(targetScale));
+        // Calculate velocity (pixels per second), use absolute value for speed scalar
+        const velocity = dt > 0 ? (dy / dt) * 1000 : 0;
+        const boost = Math.abs(velocity * 0.005);
+        const targetScale = boost + 1;
 
-      // Debounce return to normal speed
-      clearTimeout(stopTimeout);
-      stopTimeout = setTimeout(() => {
-        this.timelines.forEach((tl) => {
-          gsap.to(tl, {
-            timeScale: 1,
-            duration: 0.6,
-            ease: 'power2.out',
-            overwrite: true,
+        // Apply timeScale to all active timelines
+        this.timelines.forEach((tl) => tl.timeScale(targetScale));
+
+        // Debounce return to normal speed
+        clearTimeout(stopTimeout);
+        stopTimeout = setTimeout(() => {
+          this.timelines.forEach((tl) => {
+            gsap.to(tl, {
+              timeScale: 1,
+              duration: 0.6,
+              ease: 'power2.out',
+              overwrite: true,
+            });
           });
-        });
-      }, 100);
-    };
+        }, 100);
+      };
 
-    window.addEventListener('scroll', this.scrollHandler, { passive: true });
+      window.addEventListener('scroll', this.scrollHandler, { passive: true });
+    }
   }
 
   destroy() {
