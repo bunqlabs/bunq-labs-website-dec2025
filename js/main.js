@@ -103,7 +103,7 @@ document.addEventListener('keydown', (e) => {
 const renderer = new THREE.WebGLRenderer({
   antialias: window.devicePixelRatio < 2,
   powerPreference: 'high-performance',
-  alpha: false,
+  alpha: !isDesktop, // Alpha true on mobile for video background
 });
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.setScissorTest(false);
@@ -113,11 +113,17 @@ container.appendChild(renderer.domElement);
 let mountainScene, grassScene;
 
 if (isDesktop) {
-  // Desktop: Init Scenes
+  // Desktop: Init Both Scenes
   mountainScene = new MountainScene(renderer, qualityManager);
   grassScene = new GrassScene(renderer, qualityManager);
 } else {
-  // Mobile: Inject Video, Skip Scenes
+  // Mobile: Init Mountain Only (Grass is Video)
+  mountainScene = new MountainScene(renderer, qualityManager);
+  // grassScene remains undefined
+}
+
+if (!isDesktop) {
+  // Mobile: Inject Background Video
   console.log('[Mobile] Injecting Background Video');
 
   const video = document.createElement('video');
@@ -141,8 +147,11 @@ if (isDesktop) {
     // renderer.domElement is appended but we can hide it or container
     // Actually we want video visible, canvas hidden.
     // Since video is in container, we keep container visible but hide #webgl
-    const webglEl = document.getElementById('webgl');
-    if (webglEl) webglEl.style.display = 'none';
+    // Actually we want video visible, canvas hidden.
+    // Since video is in container, we keep container visible but hide #webgl
+    // UPDATE: We want #webgl VISIBLE on mobile now, so MountainScene can render on top.
+    // const webglEl = document.getElementById('webgl');
+    // if (webglEl) webglEl.style.display = 'none';
   }
 
   // Force play
@@ -163,6 +172,10 @@ if (isDesktop) {
   renderer.setSize(container.clientWidth, container.clientHeight);
   mountainScene.resize(container.clientWidth, container.clientHeight);
   grassScene.resize(container.clientWidth, container.clientHeight);
+} else {
+  // Mobile Resize: Only Mountain
+  renderer.setSize(container.clientWidth, container.clientHeight);
+  mountainScene.resize(container.clientWidth, container.clientHeight);
 }
 textScrambler.init();
 
@@ -272,6 +285,10 @@ function onResize() {
     renderer.setSize(w, h);
     if (mountainScene) mountainScene.resize(w, h);
     if (grassScene) grassScene.resize(w, h);
+  } else {
+    // Mobile Resize
+    renderer.setSize(w, h);
+    if (mountainScene) mountainScene.resize(w, h);
   }
   scrollBender.resize();
 
@@ -567,6 +584,7 @@ function animate(time) {
 
   // 1. Mountain (Priority if visible)
   // 1. Mountain (Priority if visible)
+  // 1. Mountain (Priority if visible)
   if (isDesktop) {
     if (mountainVisible) {
       // Render Mountain ONLY
@@ -590,6 +608,16 @@ function animate(time) {
         grassScene.update(t, dt);
         grassScene.render();
       }
+    }
+  } else {
+    // Mobile: Render Mountain Only (Transparent background shows video)
+    // No Grass Scene Fallback
+    if (mountainVisible && mountainScene) {
+      mountainScene.update(t, dt);
+      mountainScene.render();
+    } else {
+      // If mountain not visible, just clear the canvas to transparent
+      renderer.clear();
     }
   }
 
@@ -683,15 +711,11 @@ if (initialLoader && loaderBtn) {
   function enterSite() {
     siteEntered = true;
     // Trigger Animation
-    if (isDesktop && mountainScene) {
+    if (mountainScene) {
+      // Works on Desktop AND Mobile now
       mountainScene.animateEntry();
-    } else {
-      // Mobile: Manually fade in content since MountainScene is absent
-      const mainWrapper = document.querySelector('.main-wrapper');
-      if (mainWrapper) {
-        gsap.to(mainWrapper, { opacity: 1, duration: 1 });
-      }
     }
+    // No longer need manual transparency hack since mountainScene does it
 
     // Animate Out Loader
     gsap.to(initialLoader, {
