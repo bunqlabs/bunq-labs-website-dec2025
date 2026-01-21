@@ -156,6 +156,13 @@ if (!isDesktop) {
 
   // Force play
   video.play().catch((e) => console.log('Video Autoplay failed', e));
+
+  // Error handling to prevent loader hang
+  video.onerror = () => {
+    console.error('[Mobile] Video failed to load:', video.error);
+    // Mark as ready so loader doesn't hang
+    video.hasError = true;
+  };
 }
 
 const scrollBender = new ScrollBender();
@@ -714,6 +721,8 @@ if (initialLoader && loaderBtn) {
     if (mountainScene) {
       // Works on Desktop AND Mobile now
       mountainScene.animateEntry();
+      // Ensure video plays immediately on entry, even if visibility logic didn't trigger change
+      mountainScene.playVideo();
     }
     // No longer need manual transparency hack since mountainScene does it
 
@@ -732,8 +741,23 @@ if (initialLoader && loaderBtn) {
     }
 
     // 1. Initial State Check (HAVE_CURRENT_DATA or more)
-    if (video.readyState < 2) {
+    // Also check for explicit error flag set in onerror handler
+    if (video.readyState < 2 && !video.hasError) {
+      if (video.error) {
+        console.warn('[Video Loader] Video Error detected via API. Bypassing.');
+        onReady();
+        return;
+      }
       requestAnimationFrame(checkBuffer);
+      return;
+    }
+
+    // If error occurred, bypass normal buffer check
+    if (video.hasError) {
+      console.warn(
+        '[Video Loader] Video Error detected. Bypassing buffer check.',
+      );
+      onReady();
       return;
     }
 
