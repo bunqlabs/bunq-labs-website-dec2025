@@ -689,6 +689,15 @@ if (initialLoader && loaderBtn) {
     // Initial Resize to set up created scenes
     onResize();
 
+    // MOUNT SCENES:
+    // Because updateRouteState ran before scenes existed, we must re-run mounting logic.
+    // This ensures event listeners (like hover) are attached.
+    const currentContainer = document.querySelector('[data-barba="container"]');
+    if (currentContainer) {
+      const ns = currentContainer.dataset.namespace;
+      updateRouteState(ns, currentContainer);
+    }
+
     // 3. Pre-flight Benchmark (500ms dead time)
     loaderBtn.textContent = 'Calibrating...';
     perfMonitor.startBenchmark();
