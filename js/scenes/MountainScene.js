@@ -32,7 +32,7 @@ export class MountainScene {
         value: new THREE.Vector3(
           this.snowArea.x,
           this.snowArea.y,
-          this.snowArea.z
+          this.snowArea.z,
         ),
       },
       fallSpeed: { value: this.snowFallSpeed },
@@ -132,7 +132,7 @@ export class MountainScene {
     window.removeEventListener('touchstart', this.resumeVideo);
     document.removeEventListener(
       'visibilitychange',
-      this.handleVisibilityChange
+      this.handleVisibilityChange,
     );
     this.pauseVideo();
   }
@@ -149,7 +149,7 @@ export class MountainScene {
       fov,
       window.innerWidth / window.innerHeight,
       0.01,
-      2000
+      2000,
     );
     this.camera.position.set(0, 0, 0.01); // Start zoomed in
   }
@@ -230,7 +230,7 @@ export class MountainScene {
 
     this.screenMesh = new THREE.Mesh(
       new THREE.PlaneGeometry(screenWidth, screenHeight),
-      new THREE.MeshBasicMaterial({ color: 0xffffff })
+      new THREE.MeshBasicMaterial({ color: 0xffffff }),
     );
     this.contentGroup.add(this.screenMesh);
 
@@ -262,13 +262,13 @@ export class MountainScene {
         currentTime: this.video.currentTime,
       });
     this.video.addEventListener('waiting', () =>
-      logVideo('Waiting (Buffering?)')
+      logVideo('Waiting (Buffering?)'),
     );
     this.video.addEventListener('stalled', () => logVideo('Stalled'));
     this.video.addEventListener('playing', () => logVideo('Playing'));
     this.video.addEventListener('pause', () => logVideo('Paused'));
     this.video.addEventListener('canplaythrough', () =>
-      logVideo('Can Play Through')
+      logVideo('Can Play Through'),
     );
 
     // PREVENTION: Attach to DOM to avoid background throttling
@@ -311,7 +311,7 @@ export class MountainScene {
       0.5,
       -0.5,
       0,
-      1
+      1,
     );
 
     // 3. Simple Plane displaying the video
@@ -342,7 +342,7 @@ export class MountainScene {
                     gl_FragColor = color / 25.0;
                 }
             `,
-      })
+      }),
     );
     this.lightCvtScene.add(this.lightCvtMesh);
 
@@ -360,7 +360,7 @@ export class MountainScene {
 
     const dracoLoader = new DRACOLoader();
     dracoLoader.setDecoderPath(
-      'https://www.gstatic.com/draco/versioned/decoders/1.5.7/'
+      'https://www.gstatic.com/draco/versioned/decoders/1.5.7/',
     );
     loader.setDRACOLoader(dracoLoader);
 
@@ -376,7 +376,7 @@ export class MountainScene {
 
     const mountainTex = texLoader.load(
       'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/textures/light_bake.webp',
-      () => {}
+      () => {},
     );
 
     mountainTex.colorSpace = THREE.LinearSRGBColorSpace;
@@ -430,12 +430,12 @@ export class MountainScene {
         this.contentGroup.add(root);
       },
       undefined,
-      (err) => console.error('[Mountain] Failed to load mountain GLB:', err)
+      (err) => console.error('[Mountain] Failed to load mountain GLB:', err),
     );
   }
 
   initSnow() {
-    if (window.innerWidth < 768) {
+    if (window.innerWidth < Config.System.desktopBreakpoint) {
       console.log('[Mountain] Snow disabled on mobile');
       return;
     }
@@ -455,7 +455,7 @@ export class MountainScene {
 
     snowGeo.setAttribute(
       'position',
-      new THREE.BufferAttribute(snowPositions, 3)
+      new THREE.BufferAttribute(snowPositions, 3),
     );
     snowGeo.setAttribute('aSpeed', new THREE.BufferAttribute(snowSpeeds, 1));
     snowGeo.setAttribute('aOffset', new THREE.BufferAttribute(snowOffsets, 1));
@@ -582,7 +582,7 @@ export class MountainScene {
         0,
         1,
         1,
-        this.pixelBuffer
+        this.pixelBuffer,
       );
       this.renderer.setRenderTarget(oldTarget);
 
@@ -623,13 +623,13 @@ export class MountainScene {
             // Stuck for 500ms despite having data
             console.warn(
               `[Mountain] Video Watchdog: Stuck at ${this.video.currentTime.toFixed(
-                2
-              )}s (Ready: ${this.video.readyState}). Forcing play...`
+                2,
+              )}s (Ready: ${this.video.readyState}). Forcing play...`,
             );
             this.video
               .play()
               .catch((e) =>
-                console.error('[Mountain] Watchdog play failed', e)
+                console.error('[Mountain] Watchdog play failed', e),
               );
             this.stuckTime = 0;
           }
@@ -671,7 +671,7 @@ export class MountainScene {
           this.video
             .play()
             .catch((err) =>
-              console.error('[Mountain] Muted Autoplay also failed', err)
+              console.error('[Mountain] Muted Autoplay also failed', err),
             );
         }
       });

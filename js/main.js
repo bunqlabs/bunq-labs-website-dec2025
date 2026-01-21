@@ -136,7 +136,7 @@ if (!isDesktop) {
 
   const source = document.createElement('source');
   source.src =
-    'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/video/showreel_optimised.mp4';
+    'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/video/website-bg.mp4';
   source.type = 'video/mp4';
 
   video.appendChild(source);
