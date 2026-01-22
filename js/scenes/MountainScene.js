@@ -241,7 +241,7 @@ export class MountainScene {
     } else {
       this.video = document.createElement('video');
       this.video.crossOrigin = 'anonymous';
-      this.video.src = `https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/video/showreel_optimised.mp4?t=${Date.now()}`;
+      this.video.src = `https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/video/showreel-v2.webm?t=${Date.now()}`;
       this.video.muted = true;
       this.video.playsInline = true;
       this.video.preload = 'auto';
