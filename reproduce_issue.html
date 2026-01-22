@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flick Cards Video Repro</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      /* Mimic layout that forces overlap if not in styles.css */
+      .card-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-rows: 1fr;
+        width: 300px;
+        height: 400px;
+        margin: 100px auto;
+        position: relative;
+      }
+      .card {
+        grid-area: 1 / 1 / 2 / 2; /* Force stacking */
+        width: 100%;
+        height: 100%;
+        position: relative;
+        overflow: hidden;
+      }
+      .flick-card__media {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+      }
+      .flick-card__media video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+      /* Debug styles to see bounds */
+      .card {
+        border: 2px solid red;
+      }
+    </style>
+  </head>
+  <body style="background: #222">
+    <div data-flick-cards-init>
+      <div data-flick-cards-list class="card-grid">
+        <!-- 7 Cards -->
+        <div data-flick-cards-item class="card">
+          <div class="flick-card__media">
+            <video
+              src="https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/video/showreel_optimised.mp4"
+              autoplay
+              loop
+              muted
+              playsinline
+            ></video>
+          </div>
+          <h2 style="position: relative; z-index: 2">Card 1 (Video)</h2>
+        </div>
+        <div data-flick-cards-item class="card">
+          <div class="flick-card__media" style="background: blue"></div>
+          <h2 style="position: relative; z-index: 2">Card 2</h2>
+        </div>
+        <div data-flick-cards-item class="card">
+          <div class="flick-card__media" style="background: green"></div>
+          <h2>Card 3</h2>
+        </div>
+        <div data-flick-cards-item class="card">
+          <div class="flick-card__media" style="background: yellow"></div>
+          <h2>Card 4</h2>
+        </div>
+        <div data-flick-cards-item class="card">
+          <div class="flick-card__media" style="background: purple"></div>
+          <h2>Card 5</h2>
+        </div>
+        <div data-flick-cards-item class="card">
+          <div class="flick-card__media" style="background: orange"></div>
+          <h2>Card 6</h2>
+        </div>
+        <div data-flick-cards-item class="card">
+          <div class="flick-card__media" style="background: pink"></div>
+          <h2>Card 7</h2>
+        </div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <button id="flick-control-left">Left</button>
+    <button id="flick-control-right">Right</button>
+
+    <script type="module">
+      import { FlickCards } from './js/components/FlickCards.js';
+      const fc = new FlickCards();
+      fc.init();
+    </script>
+  </body>
+</html>

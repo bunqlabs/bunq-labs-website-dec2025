@@ -23,7 +23,7 @@ export class FlickCards {
       if (!list) return;
 
       const cards = Array.from(
-        list.querySelectorAll('[data-flick-cards-item]')
+        list.querySelectorAll('[data-flick-cards-item]'),
       );
       const total = cards.length;
       if (total < 7) {
@@ -89,6 +89,18 @@ export class FlickCards {
 
           card.setAttribute('data-flick-cards-item-status', status);
           card.style.zIndex = cfg.z;
+
+          const video = card.querySelector('video');
+          if (video) {
+            if (status === 'active') {
+              video.play().catch((e) => {
+                // Ignore autoplay errors or interaction requirements
+                // console.warn('Video autoplay failed', e);
+              });
+            } else {
+              video.pause();
+            }
+          }
 
           gsap.to(card, {
             duration: 1,
@@ -171,7 +183,7 @@ export class FlickCards {
               requestAnimationFrame(() => {
                 const el = document.elementFromPoint(
                   releaseClientX,
-                  this.pointerEvent.clientY
+                  this.pointerEvent.clientY,
                 );
                 if (el && el !== this.target) {
                   el.click();
@@ -219,12 +231,15 @@ export class FlickCards {
       // Clean up button listeners
       if (item.buttons) {
         if (item.buttons.left) {
-          item.buttons.left.removeEventListener('click', item.buttons.handleLeft);
+          item.buttons.left.removeEventListener(
+            'click',
+            item.buttons.handleLeft,
+          );
         }
         if (item.buttons.right) {
           item.buttons.right.removeEventListener(
             'click',
-            item.buttons.handleRight
+            item.buttons.handleRight,
           );
         }
       }
