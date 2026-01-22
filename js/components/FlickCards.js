@@ -102,6 +102,15 @@ export class FlickCards {
             }
           }
 
+          // Update work-desc if active
+          if (status === 'active') {
+            const desc = card.getAttribute('data-flick-cards-item-desc');
+            const descEl = document.getElementById('work-desc');
+            if (descEl && desc) {
+              descEl.textContent = desc;
+            }
+          }
+
           gsap.to(card, {
             duration: 1,
             ease: 'elastic.out(1.2, 1)',
