@@ -124,7 +124,7 @@ const videoLoader = new VideoLoader();
 const videoAssets = [
   {
     id: 'showreel',
-    src: 'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/video/showreel-v2.webm',
+    src: 'https://bunqlabs.github.io/bunq-labs-website-dec2025/assets/video/showreel-v2.mp4',
   },
 ];
 
