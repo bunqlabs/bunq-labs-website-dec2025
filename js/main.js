@@ -23,6 +23,7 @@ import {
   PerformanceMonitor,
   CaseStudyNavigation,
   VideoLoader,
+  TestimonialsSlider,
   Config,
 } from './modules.js';
 
@@ -151,6 +152,7 @@ const navigation = new Navigation();
 const serviceCards = new ServiceCards();
 const textScrambler = new TextScrambler();
 const caseStudyNavigation = new CaseStudyNavigation();
+const testimonialsSlider = new TestimonialsSlider();
 
 if (isDesktop) {
   renderer.setSize(container.clientWidth, container.clientHeight);
@@ -347,6 +349,7 @@ if (barba) {
           flickCards.destroy();
           serviceCards.destroy();
           caseStudyNavigation.destroy();
+          testimonialsSlider.destroy();
           // ...
 
           // Return a Promise to force Barba to wait
@@ -472,6 +475,7 @@ if (barba) {
           serviceCards.init(); // Re-init service cards
           textScrambler.init();
           caseStudyNavigation.init(lenis);
+          testimonialsSlider.init();
         },
       },
     ],
@@ -506,6 +510,7 @@ flickCards.init();
 serviceCards.init();
 textScrambler.init();
 caseStudyNavigation.init(lenis);
+testimonialsSlider.init();
 
 // === ANIMATION LOOP ===
 

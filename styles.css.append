@@ -1,0 +1,50 @@
+/* TESTIMONIALS SLIDER */
+/* Orange highlight ring on bullet point nav for hover + focus states */
+.centered-slider-bullet::after{
+  content: '';
+  position: absolute;
+  inset: 2px;
+  border-radius: 100em;
+  z-index: -1;
+  border: 1px solid #ffffff;
+  transition: all 0.5s cubic-bezier(0.65, 0.05, 0, 1);
+}
+
+.centered-slider-bullet:hover::after,
+.centered-slider-bullet.active::after,
+.centered-slider-bullet:focus::after{
+  inset: -5px;
+}
+
+/* Fade non-active slides */
+.centered-slider-row:has( .centered-slider-slide.active) .centered-slider-slide:not(.active){
+  opacity: 0;
+  box-shadow: 0px 0px 0px rgba(0, 0, 0, 0);
+}
+
+/* Little (orange) corners on each slide */
+/* https://css-tip.com/corner-only-border-image/ */
+.centered-slider-slide::after {
+  --size: 1em; /* corner size */
+  --width: 0px;  /* border width */
+  --gap: 0.5em; /* gap */
+  --color: #ff3232;
+  content: '';
+  position: absolute;
+  inset: calc(var(--gap) * -1);
+  z-index: 1;
+  opacity: 0;
+  padding: calc(var(--gap) + var(--width));
+  outline: var(--width) solid var(--color);
+  outline-offset: calc(var(--gap)/-1);
+  mask:
+    conic-gradient(at var(--size) var(--size),#0000 75%,#000 0)
+    0 0/calc(100% - var(--size)) calc(100% - var(--size)),
+    linear-gradient(#000 0 0) content-box;
+  transition: all 0.5s cubic-bezier(0.65, 0.05, 0, 1);
+}
+
+.centered-slider-slide.active::after {
+  outline-offset: calc(-1*var(--width));
+  opacity: 1;
+}
