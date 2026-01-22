@@ -5,8 +5,8 @@ export const Config = {
   Mountain: {
     snowCount: 500,
     snowArea: { x: 0.5, y: 0.5, z: 0.5 },
-    screenWidth: 0.192,
-    screenHeight: 0.192,
+    screenWidth: 0.15,
+    screenHeight: 0.15,
     screenLightIntensity: 500,
     videoSampleResolution: { w: 4, h: 4 },
     lightUpdateSkipThreshold: 0.1, // Skip if frame time > 100ms
