@@ -128,10 +128,17 @@ export class VideoLoader {
         total += pct;
 
         // Threshold for "Ready"
-        if (pct < 98 && !vData.ready) {
-          allReady = false;
-        } else {
-          vData.ready = true;
+        // Fix for Chrome: It lazy-buffers, so waiting for 100% can hang.
+        // We accept 50% buffer IF the browser says it has enough data (readyState 4).
+        const isReadyState4 = vData.element.readyState === 4;
+        const isBufferedEnough = pct >= 50;
+
+        if (!vData.ready) {
+          if ((isBufferedEnough && isReadyState4) || pct >= 98) {
+            vData.ready = true;
+          } else {
+            allReady = false;
+          }
         }
       });
 
