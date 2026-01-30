@@ -9,8 +9,17 @@ import Lenis from 'https://unpkg.com/lenis@1.1.18/dist/lenis.mjs';
 window.gsap = gsap;
 window.ScrollTrigger = ScrollTrigger;
 
+// Get global SplitText (loaded via script tag)
+const SplitText = window.SplitText;
+
+if (SplitText) {
+  gsap.registerPlugin(ScrollTrigger, SplitText);
+} else {
+  console.warn('SplitText not found! Check script loading.');
+}
+
 // Export External Libraries
-export { THREE, Stats, gsap, ScrollTrigger, Lenis };
+export { THREE, Stats, gsap, ScrollTrigger, Lenis, SplitText };
 
 // Utilities
 export { Config } from './settings.js';
@@ -38,3 +47,4 @@ export { TextScrambler } from './components/TextScrambler.js';
 export { ServiceCards } from './components/ServiceCards.js';
 export { CaseStudyNavigation } from './components/CaseStudyNavigation.js';
 export { TestimonialsSlider } from './components/TestimonialsSlider.js';
+export { HeadingSplitText } from './components/HeadingSplitText.js';

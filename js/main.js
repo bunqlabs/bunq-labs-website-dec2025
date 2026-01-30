@@ -24,6 +24,7 @@ import {
   CaseStudyNavigation,
   VideoLoader,
   TestimonialsSlider,
+  HeadingSplitText,
   Config,
 } from './modules.js';
 
@@ -153,6 +154,7 @@ const serviceCards = new ServiceCards();
 const textScrambler = new TextScrambler();
 const caseStudyNavigation = new CaseStudyNavigation();
 const testimonialsSlider = new TestimonialsSlider();
+const headingSplitText = new HeadingSplitText();
 
 if (isDesktop) {
   renderer.setSize(container.clientWidth, container.clientHeight);
@@ -475,7 +477,9 @@ if (barba) {
           serviceCards.init(); // Re-init service cards
           textScrambler.init();
           caseStudyNavigation.init(lenis);
+          caseStudyNavigation.init(lenis);
           testimonialsSlider.init();
+          headingSplitText.init();
         },
       },
     ],
@@ -511,6 +515,7 @@ serviceCards.init();
 textScrambler.init();
 caseStudyNavigation.init(lenis);
 testimonialsSlider.init();
+headingSplitText.init();
 
 // === ANIMATION LOOP ===
 
