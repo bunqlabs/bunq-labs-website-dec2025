@@ -29,9 +29,9 @@ export class HeadingSplitText {
           // toggleActions: 'play none none reverse', // Removed to ensure it only plays once
         },
         duration: 1,
-        y: -20,
+        y: 20,
         opacity: 0,
-        stagger: 0.05,
+        stagger: 0.1,
         ease: 'power3.out',
       });
 
