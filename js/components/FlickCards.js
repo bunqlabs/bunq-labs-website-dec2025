@@ -1,5 +1,6 @@
 import gsap from 'https://unpkg.com/gsap@3.12.5/index.js?module';
 import Draggable from 'https://unpkg.com/gsap@3.12.5/Draggable.js?module';
+import { HeadingSplitText } from '../modules.js';
 
 gsap.registerPlugin(Draggable);
 
@@ -108,6 +109,7 @@ export class FlickCards {
             const descEl = document.getElementById('work-desc');
             if (descEl && desc) {
               descEl.textContent = desc;
+              HeadingSplitText.animateElement(descEl);
             }
           }
 

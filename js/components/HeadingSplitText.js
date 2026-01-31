@@ -47,4 +47,28 @@ export class HeadingSplitText {
     });
     this.instances = [];
   }
+
+  static animateElement(element) {
+    if (!element) return;
+
+    // Cleanup previous split if it exists (basic check)
+    // For a more robust solution, we'd track instances, but for this specific use case,
+    // we can just re-instantiate since SplitText usually handles revert via its API if we kept the ref.
+    // However, since we don't store the ref on the element in this static context,
+    // we assume the element content was just replaced (which destroys old DOM nodes)
+    // OR we just run it on the new text.
+    // If we just updated textual content, the old spans are gone.
+
+    // Split text by words
+    const split = new SplitText(element, { type: 'words' });
+
+    gsap.from(split.words, {
+      duration: 1,
+      y: 20,
+      opacity: 0,
+      stagger: 0.1,
+      ease: 'power3.out',
+      // No ScrollTrigger, run immediately
+    });
+  }
 }
