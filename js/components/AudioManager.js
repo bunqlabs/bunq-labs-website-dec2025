@@ -116,8 +116,21 @@ export class AudioManager {
   updateUI() {
     const btn = document.getElementById('audio-toggle');
     if (btn) {
-      btn.textContent = this.isMuted ? 'SOUND OFF' : 'SOUND ON';
+      const newText = this.isMuted ? 'SOUND OFF' : 'SOUND ON';
+      btn.textContent = newText;
       btn.style.opacity = this.isMuted ? '0.5' : '1.0';
+
+      // Sync with TextScrambler
+      // We must update the cached base text so it doesn't revert on hover
+      if (typeof btn.__baseText !== 'undefined') {
+        btn.__baseText = newText;
+      }
+
+      // Reset width lock to force re-measurement for new text length
+      if (btn.__widthLocked) {
+        btn.__widthLocked = false;
+        btn.style.width = '';
+      }
     }
   }
 }
