@@ -441,6 +441,17 @@ if (barba) {
                 // Correct: leave() set it to 0. It persists.
               }
 
+              // Initialize Split Text HERE (Hidden State)
+              // This ensures words are split and opacity set to 0 before wrapper reveals
+              try {
+                // headingSplitText.init(data.next.container);
+                // Note: init() creates ScrollTriggers.
+                // Since wrapper is opacity:0 but display:block, measurements should be fine.
+                headingSplitText.init(data.next.container);
+              } catch (e) {
+                console.warn('[Transition] SplitText init failed', e);
+              }
+
               // Wait for delay, then Reveal
               setTimeout(() => {
                 // 1. Reveal Wrapper via CSS Opacity
@@ -479,7 +490,10 @@ if (barba) {
           caseStudyNavigation.init(lenis);
           caseStudyNavigation.init(lenis);
           testimonialsSlider.init();
-          headingSplitText.init();
+          caseStudyNavigation.init(lenis);
+          caseStudyNavigation.init(lenis);
+          testimonialsSlider.init();
+          // headingSplitText.init(); // Moved to enter() for pre-computation
         },
       },
     ],

@@ -5,7 +5,7 @@ export class HeadingSplitText {
     this.instances = [];
   }
 
-  init() {
+  init(container = document) {
     const selectors = [
       '.heading-style-h1',
       '.heading-style-h2',
@@ -15,7 +15,7 @@ export class HeadingSplitText {
       '.heading-style-h6',
     ];
 
-    const elements = document.querySelectorAll(selectors.join(', '));
+    const elements = container.querySelectorAll(selectors.join(', '));
 
     elements.forEach((el) => {
       // Split text by words
