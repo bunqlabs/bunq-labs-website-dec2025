@@ -14,14 +14,7 @@ export class HeadingSplitText {
     // Let's rely on manual destroy() called from main.js before init() or use a flag.
     // For now, let's just make sure we find elements.
 
-    const selectors = [
-      '.heading-style-h1',
-      '.heading-style-h2',
-      '.heading-style-h3',
-      '.heading-style-h4',
-      '.heading-style-h5',
-      '.heading-style-h6',
-    ];
+    const selectors = ['.is-split'];
 
     const elements = container.querySelectorAll(selectors.join(', '));
 
