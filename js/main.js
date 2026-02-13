@@ -23,7 +23,7 @@ import {
   PerformanceMonitor,
   CaseStudyNavigation,
   VideoLoader,
-  TestimonialsSlider,
+  TestimonialsSwiper,
   HeadingSplitText,
   StatsCounter,
   Config,
@@ -155,7 +155,7 @@ const navigation = new Navigation();
 const serviceCards = new ServiceCards();
 const textScrambler = new TextScrambler();
 const caseStudyNavigation = new CaseStudyNavigation();
-const testimonialsSlider = new TestimonialsSlider();
+const testimonialsSwiper = new TestimonialsSwiper();
 const headingSplitText = new HeadingSplitText();
 const statsCounter = new StatsCounter();
 
@@ -354,7 +354,7 @@ if (barba) {
           flickCards.destroy();
           serviceCards.destroy();
           caseStudyNavigation.destroy();
-          testimonialsSlider.destroy();
+          testimonialsSwiper.destroy();
           statsCounter.destroy();
           // ...
 
@@ -493,10 +493,10 @@ if (barba) {
           textScrambler.init();
           caseStudyNavigation.init(lenis);
           caseStudyNavigation.init(lenis);
-          testimonialsSlider.init();
           caseStudyNavigation.init(lenis);
           caseStudyNavigation.init(lenis);
-          testimonialsSlider.init();
+          // Fixed duplicates and switched to Swiper
+          testimonialsSwiper.init();
           statsCounter.init();
           // headingSplitText.init(); // Moved to enter() for pre-computation
         },
@@ -533,7 +533,7 @@ flickCards.init();
 serviceCards.init();
 textScrambler.init();
 caseStudyNavigation.init(lenis);
-testimonialsSlider.init();
+testimonialsSwiper.init();
 headingSplitText.init();
 statsCounter.init();
 

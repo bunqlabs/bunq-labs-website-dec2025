@@ -47,6 +47,6 @@ export { Navigation } from './components/Navigation.js';
 export { TextScrambler } from './components/TextScrambler.js';
 export { ServiceCards } from './components/ServiceCards.js';
 export { CaseStudyNavigation } from './components/CaseStudyNavigation.js';
-export { TestimonialsSlider } from './components/TestimonialsSlider.js';
+export { TestimonialsSwiper } from './components/TestimonialsSwiper.js';
 export { HeadingSplitText } from './components/HeadingSplitText.js';
 export { StatsCounter } from './components/StatsCounter.js';
