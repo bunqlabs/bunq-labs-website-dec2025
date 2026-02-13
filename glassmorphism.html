@@ -1,0 +1,118 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LiquidGL Glassmorphism Test</title>
+    <style>
+      body {
+        margin: 0;
+        height: 100vh;
+        width: 100vw;
+        overflow: hidden;
+        background-image: url('assets/glass-background.webp');
+        background-size: cover;
+        background-position: center;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-family: 'Inter', sans-serif;
+      }
+
+      .box {
+        width: 400px;
+        height: 350px;
+        border-radius: 20px;
+        position: relative;
+        z-index: 100;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 100px;
+        box-sizing: border-box;
+      }
+
+      .content {
+        color: white;
+        text-align: center;
+      }
+
+      .content h1 {
+        margin: 0 0 10px 0;
+        font-size: 2rem;
+      }
+
+      .content p {
+        font-size: 1.1rem;
+        opacity: 0.9;
+        line-height: 1.5;
+      }
+    </style>
+    <script
+      src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"
+      defer
+    ></script>
+    <script type="module">
+      import { liquidGL } from './js/utils/liquidGL.js';
+      window.liquidGL = liquidGL;
+    </script>
+  </head>
+  <body>
+    <div class="box liquidGL">
+      <div class="content">
+        <h1>Liquid Glass</h1>
+        <p>
+          This is a test of the liquidGL library. The background should be
+          refracted through this card.
+        </p>
+      </div>
+    </div>
+    <div class="box liquidGL">
+      <div class="content">
+        <h1>Liquid Glass</h1>
+        <p>
+          This is a test of the liquidGL library. The background should be
+          refracted through this card.
+        </p>
+      </div>
+    </div>
+    <div class="box liquidGL">
+      <div class="content">
+        <h1>Liquid Glass</h1>
+        <p>
+          This is a test of the liquidGL library. The background should be
+          refracted through this card.
+        </p>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        // Ensure the background image is loaded before initializing to get a good snapshot
+        const img = new Image();
+        img.src = 'assets/glass-background.webp';
+        img.onload = () => {
+          const glassEffect = liquidGL({
+            snapshot: 'body', // The area used for refraction
+            target: '.liquidGL', // CSS selector for the element
+            resolution: 1.0, // High quality
+            refraction: 0.02, // Refraction strength
+            bevelDepth: 0.2, // Bevel intensity
+            bevelWidth: 0.05, // Bevel width
+            frost: 0, // No frost for clear glass
+            shadow: true, // Soft shadow
+            specular: true, // Highlights
+            reveal: 'fade', // Reveal animation
+            // tilt: true, // Enable tilt
+            // tiltFactor: 10, // Tilt amount
+            magnify: 1,
+            on: {
+              init(instance) {
+                console.log('liquidGL ready!', instance);
+              },
+            },
+          });
+        };
+      });
+    </script>
+  </body>
+</html>

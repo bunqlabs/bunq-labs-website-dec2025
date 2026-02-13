@@ -31,6 +31,7 @@ export { initPageTitleChanger } from './utils/title.js';
 export { QualityManager } from './utils/QualityManager.js';
 export { PerformanceMonitor } from './utils/PerformanceMonitor.js';
 export { VideoLoader } from './utils/VideoLoader.js';
+export { liquidGL } from './utils/liquidGL.js';
 
 // Scenes
 export { MountainScene } from './scenes/MountainScene.js';
@@ -48,3 +49,4 @@ export { ServiceCards } from './components/ServiceCards.js';
 export { CaseStudyNavigation } from './components/CaseStudyNavigation.js';
 export { TestimonialsSlider } from './components/TestimonialsSlider.js';
 export { HeadingSplitText } from './components/HeadingSplitText.js';
+export { StatsCounter } from './components/StatsCounter.js';

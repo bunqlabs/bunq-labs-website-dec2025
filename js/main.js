@@ -25,7 +25,9 @@ import {
   VideoLoader,
   TestimonialsSlider,
   HeadingSplitText,
+  StatsCounter,
   Config,
+  liquidGL,
 } from './modules.js';
 
 // === CONFIGURATION & STATE ===
@@ -155,6 +157,7 @@ const textScrambler = new TextScrambler();
 const caseStudyNavigation = new CaseStudyNavigation();
 const testimonialsSlider = new TestimonialsSlider();
 const headingSplitText = new HeadingSplitText();
+const statsCounter = new StatsCounter();
 
 if (isDesktop) {
   renderer.setSize(container.clientWidth, container.clientHeight);
@@ -352,6 +355,7 @@ if (barba) {
           serviceCards.destroy();
           caseStudyNavigation.destroy();
           testimonialsSlider.destroy();
+          statsCounter.destroy();
           // ...
 
           // Return a Promise to force Barba to wait
@@ -493,6 +497,7 @@ if (barba) {
           caseStudyNavigation.init(lenis);
           caseStudyNavigation.init(lenis);
           testimonialsSlider.init();
+          statsCounter.init();
           // headingSplitText.init(); // Moved to enter() for pre-computation
         },
       },
@@ -530,6 +535,7 @@ textScrambler.init();
 caseStudyNavigation.init(lenis);
 testimonialsSlider.init();
 headingSplitText.init();
+statsCounter.init();
 
 // === ANIMATION LOOP ===
 
