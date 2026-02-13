@@ -356,6 +356,7 @@ if (barba) {
           caseStudyNavigation.destroy();
           testimonialsSwiper.destroy();
           statsCounter.destroy();
+          headingSplitText.destroy(); // Ensure cleanup
           // ...
 
           // Return a Promise to force Barba to wait

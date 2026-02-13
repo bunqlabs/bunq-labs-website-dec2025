@@ -6,6 +6,14 @@ export class HeadingSplitText {
   }
 
   init(container = document) {
+    // Cleanup first to avoid duplicates if called multiple times on same container (e.g. barba)
+    // although container usually changes, safe to be sure.
+    // Actually, destroying ALL instances might be too aggressive if we only want to init new ones?
+    // But typically we re-init per page.
+
+    // Let's rely on manual destroy() called from main.js before init() or use a flag.
+    // For now, let's just make sure we find elements.
+
     const selectors = [
       '.heading-style-h1',
       '.heading-style-h2',
@@ -17,33 +25,46 @@ export class HeadingSplitText {
 
     const elements = container.querySelectorAll(selectors.join(', '));
 
-    elements.forEach((el) => {
-      // Split text by words
-      const split = new SplitText(el, { type: 'words' });
+    // Wait for fonts to be ready to ensure correct splitting dimensions
+    document.fonts.ready.then(() => {
+      elements.forEach((el) => {
+        // Skip if already initialized
+        if (el.dataset.splitTextInitialized) return;
+        el.dataset.splitTextInitialized = 'true';
 
-      const anim = gsap.from(split.words, {
-        scrollTrigger: {
-          trigger: el,
-          start: 'top 85%', // Trigger when top of element is at 85% of viewport height
-          once: true,
-          // toggleActions: 'play none none reverse', // Removed to ensure it only plays once
-        },
-        duration: 1,
-        y: 20,
-        opacity: 0,
-        stagger: 0.1,
-        ease: 'power3.out',
+        // Split text by words
+        const split = new SplitText(el, { type: 'words' });
+
+        // Ensure parent is visible for measurement?
+        // Barba transition might hide it with opacity, which is fine for dimension but not display:none.
+
+        const anim = gsap.from(split.words, {
+          scrollTrigger: {
+            trigger: el,
+            start: 'top 85%', // Trigger when top of element is at 85% of viewport height
+            once: true,
+          },
+          duration: 1,
+          y: 20,
+          opacity: 0,
+          stagger: 0.1,
+          ease: 'power3.out',
+        });
+
+        this.instances.push({ split, anim, el });
       });
 
-      this.instances.push({ split, anim });
+      // Refresh ScrollTrigger to ensure positions are correct after splitting
+      ScrollTrigger.refresh();
     });
   }
 
   destroy() {
-    this.instances.forEach(({ split, anim }) => {
+    this.instances.forEach(({ split, anim, el }) => {
       if (anim && anim.scrollTrigger) anim.scrollTrigger.kill();
       if (anim) anim.kill();
       if (split) split.revert();
+      if (el) delete el.dataset.splitTextInitialized;
     });
     this.instances = [];
   }
