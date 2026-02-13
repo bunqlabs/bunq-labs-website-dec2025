@@ -10,8 +10,6 @@ export class TestimonialsSwiper {
       return;
     }
 
-    if (!container) return;
-
     // Destroy existing instance if any
     if (this.swiper) {
       this.swiper.destroy(true, true);
